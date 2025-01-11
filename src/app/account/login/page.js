@@ -6,7 +6,8 @@ import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
-import { toast } from 'nextjs-toast-notify';
+import { toast } from 'react-toastify';
+
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -37,26 +38,21 @@ export default function LoginPage() {
   })
 
   const [errors, setErrors] = useState({
+    password: ''
   });
-  
+
   const validateForm = () => {
     const errors = {};
-    const emailPattern = /^[^@]+@[^@]+\.[^@]+$/;
-  
-    if (!emailPattern.test(formData.email)) {
-      errors.email = 'Correo electrónico no válido';
-      toast.error('Correo electrónico no válido');
-    }
-  
+
     if (formData.password.length < 8) {
       errors.password = 'La contraseña debe tener al menos 8 caracteres';
-      toast.error('La contraseña debe tener al menos 8 caracteres');
+      toast.error('La contraseña debe tener al menos 8 caracteres', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
     }
-  
+
     setErrors(errors);
     return Object.keys(errors).length === 0;
   };
-  
+
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -78,8 +74,9 @@ export default function LoginPage() {
       localStorage.setItem('token', data.token);
 
       router.push('/');
+      toast.success('Bienvenido a Comidas Mechita', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
     } catch (error) {
-      console.error('Error al iniciar sesión:', error.response || error.message);
+      console.error('Error al iniciar sesión:');
       toast.error('Error al iniciar sesión, revisa tus credenciales');
     }
   };
@@ -95,7 +92,7 @@ export default function LoginPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100">
       <div className="flex min-h-screen">
         {/* Sección de Publicidad/Presentación */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
@@ -115,7 +112,7 @@ export default function LoginPage() {
               </p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -159,7 +156,7 @@ export default function LoginPage() {
               className="mt-8"
             >
               <div className="relative h-40 w-full rounded-xl overflow-hidden">
-               
+
               </div>
             </motion.div>
           </div>
@@ -182,7 +179,7 @@ export default function LoginPage() {
           >
             {/* Header */}
             <motion.div variants={itemVariants} className="text-center">
-              <motion.h2 
+              <motion.h2
                 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2"
                 initial={{ scale: 0.5 }}
                 animate={{ scale: 1 }}
@@ -196,9 +193,9 @@ export default function LoginPage() {
             </motion.div>
 
             {/* Form */}
-            <motion.form 
-              variants={itemVariants} 
-              className="space-y-6" 
+            <motion.form
+              variants={itemVariants}
+              className="space-y-6"
               onSubmit={handleSubmit}
             >
               {/* Email Field */}
@@ -206,7 +203,7 @@ export default function LoginPage() {
                 <label className="text-sm font-medium text-gray-700" htmlFor="email">
                   Correo Electrónico
                 </label>
-                <motion.div 
+                <motion.div
                   className="relative"
                   whileFocus={{ scale: 1.02 }}
                 >
@@ -231,7 +228,7 @@ export default function LoginPage() {
                 <label className="text-sm font-medium text-gray-700" htmlFor="password">
                   Contraseña
                 </label>
-                <motion.div 
+                <motion.div
                   className="relative"
                   whileFocus={{ scale: 1.02 }}
                 >
@@ -287,13 +284,13 @@ export default function LoginPage() {
               </motion.button>
 
               {/* Register Link */}
-              <motion.div 
+              <motion.div
                 variants={itemVariants}
                 className="text-center text-sm sm:text-base"
               >
                 <span className="text-gray-600">¿No tienes una cuenta? </span>
-                <Link 
-                  href="/account/register" 
+                <Link
+                  href="/account/register"
                   className="font-medium text-orange-600 hover:text-orange-500"
                 >
                   Regístrate aquí

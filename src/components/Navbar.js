@@ -59,9 +59,9 @@ export default function Navbar() {
     }
   }, [])
 
-  // Función de logout
-  const handleLogout = () => { // Verifica si se llama a esta función
-    localStorage.removeItem('token'); // Eliminar el token
+
+  const handleLogout = () => {
+    localStorage.removeItem('token');
     setTimeout(() => {
       setIsUserMenuOpen(false);
       router.push('/account/login'); 
