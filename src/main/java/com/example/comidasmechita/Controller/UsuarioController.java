@@ -85,7 +85,7 @@ public class UsuarioController {
                 boolean isPasswordCorrect = usuarioService.checkPassword(contrasena, usuarioExistente.getContrasena());
                 if (isPasswordCorrect) {
                     // Generar el token JWT
-                    String token = jwtUtil.generateToken(usuarioExistente.getUsuario());
+                    String token = jwtUtil.generateToken(usuarioExistente);
                     return ResponseEntity.ok().body(new LoginResponse(token));
                 } else {
                     return new ResponseEntity<>("Contraseña incorrecta", HttpStatus.UNAUTHORIZED);
@@ -97,7 +97,6 @@ public class UsuarioController {
             return new ResponseEntity<>("Usuario o correo no encontrado", HttpStatus.NOT_FOUND);
         }
     }
-
 
     @GetMapping("/obtenerPorUsuario/{usuario}")  // Cambié el nombre para que coincida con el frontend
     public ResponseEntity<UsuarioEntity> getUsuarioByUsuario(@PathVariable String usuario) {
