@@ -32,6 +32,10 @@ public class UsuarioService {
         return usuarioRepository.findByUsuario(usuario);
     }
 
+    public Optional<UsuarioEntity> getUsuarioByCorreo(String email) {
+        return usuarioRepository.findByEmail(email);
+    }
+
     public UsuarioEntity saveUsuario(UsuarioEntity usuario) {
         try {
             // Verificar si el nombre de usuario ya existe

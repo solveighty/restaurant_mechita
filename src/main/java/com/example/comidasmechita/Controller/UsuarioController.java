@@ -1,8 +1,11 @@
 package com.example.comidasmechita.Controller;
 
 import com.example.comidasmechita.Entity.UsuarioEntity;
+import com.example.comidasmechita.Security.JwtUtil;
 import com.example.comidasmechita.Services.UsuarioService;
 import jakarta.validation.Valid;
+import lombok.Getter;
+import lombok.Setter;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -20,6 +23,9 @@ import java.util.Optional;
 public class UsuarioController {
     @Autowired
     private UsuarioService usuarioService;
+
+    @Autowired
+    private JwtUtil jwtUtil;
 
     @GetMapping
     public ResponseEntity<List<UsuarioEntity>> getAllUsuarios() {
@@ -60,16 +66,27 @@ public class UsuarioController {
         }
     }
 
-    @PostMapping("/verificarPassword")
-    public ResponseEntity<String> verificarPassword(@RequestParam String usuario, @RequestParam String contrasena) {
-        Optional<UsuarioEntity> usuarioOpt = usuarioService.getUsuarioByUsuario(usuario);
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestParam String identificador, @RequestParam String contrasena) {
+        Optional<UsuarioEntity> usuarioOpt;
 
+        // Detectar si el identificador es un correo electrónico o un usuario
+        if (identificador.contains("@")) {
+            usuarioOpt = usuarioService.getUsuarioByCorreo(identificador); // Buscar por correo
+        } else {
+            usuarioOpt = usuarioService.getUsuarioByUsuario(identificador); // Buscar por usuario
+        }
+
+        // Validar si se encontró el usuario
         if (usuarioOpt.isPresent()) {
             UsuarioEntity usuarioExistente = usuarioOpt.get();
             try {
+                // Verificar la contraseña
                 boolean isPasswordCorrect = usuarioService.checkPassword(contrasena, usuarioExistente.getContrasena());
                 if (isPasswordCorrect) {
-                    return new ResponseEntity<>("Contraseña correcta", HttpStatus.OK);
+                    // Generar el token JWT
+                    String token = jwtUtil.generateToken(usuarioExistente.getUsuario());
+                    return ResponseEntity.ok().body(new LoginResponse(token));
                 } else {
                     return new ResponseEntity<>("Contraseña incorrecta", HttpStatus.UNAUTHORIZED);
                 }
@@ -77,9 +94,10 @@ public class UsuarioController {
                 return new ResponseEntity<>("Error al verificar la contraseña", HttpStatus.INTERNAL_SERVER_ERROR);
             }
         } else {
-            return new ResponseEntity<>("Usuario no encontrado", HttpStatus.NOT_FOUND);
+            return new ResponseEntity<>("Usuario o correo no encontrado", HttpStatus.NOT_FOUND);
         }
     }
+
 
     @GetMapping("/obtenerPorUsuario/{usuario}")  // Cambié el nombre para que coincida con el frontend
     public ResponseEntity<UsuarioEntity> getUsuarioByUsuario(@PathVariable String usuario) {
@@ -92,5 +110,16 @@ public class UsuarioController {
     public ResponseEntity<Boolean> esAdmin(@PathVariable Long id) {
         boolean isAdmin = usuarioService.isAdmin(id);
         return ResponseEntity.ok(isAdmin);
+    }
+
+    @Getter
+    @Setter
+    static class LoginResponse {
+        private String token;
+
+        public LoginResponse(String token) {
+            this.token = token;
+        }
+
     }
 }
