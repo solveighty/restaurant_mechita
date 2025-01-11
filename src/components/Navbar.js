@@ -59,7 +59,7 @@ export default function Navbar() {
     }
   }, [])
 
-
+  // Función de logout
   const handleLogout = () => {
     localStorage.removeItem('token');
     setTimeout(() => {
@@ -69,11 +69,11 @@ export default function Navbar() {
   };
 
   // Verificar si estamos en una ruta de autenticación
-  const isAuthRoute = pathname?.startsWith('/account/')
+  const isAuthRoute = pathname?.startsWith('/account/login') || pathname?.startsWith('/account/register');
   
   // Si estamos en una ruta de autenticación, no renderizar el navbar
   if (isAuthRoute) {
-    return null
+    return null;
   }
 
   const navigation = [
@@ -82,7 +82,7 @@ export default function Navbar() {
   ]
 
   const userNavigation = [
-    { name: 'Perfil', href: '/user/profile', icon: UserCircle },
+    { name: 'Perfil', href: '/account/profile', icon: UserCircle },
     { name: 'Cerrar Sesión', href: '#', icon: LogOut, onClick: handleLogout },
   ]
 
@@ -193,7 +193,7 @@ export default function Navbar() {
                     transition={{ duration: 0.2 }}
                     className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1"
                   >
-                    <Link href="/user/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</Link>
+                    <Link href="/account/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</Link>
                     <Link href="#" onClick={handleLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</Link>
                   </motion.div>
                 )}

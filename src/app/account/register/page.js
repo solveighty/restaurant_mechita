@@ -1,9 +1,12 @@
 'use client'
 
 import { useState } from 'react'
+import { useRouter } from 'next/navigation'
 import Link from 'next/link'
+import axios from 'axios'
 import { motion } from 'framer-motion'
-import { User, Mail, Lock, Eye, EyeOff, Phone, Star, Gift, Clock } from 'lucide-react'
+import { toast } from 'react-toastify'
+import { User, Mail, Lock, Eye, EyeOff, Phone, Star, Gift, Clock, MapPin, User2 } from 'lucide-react'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -26,68 +29,140 @@ const itemVariants = {
 }
 
 export default function RegisterPage() {
+  const router = useRouter()
   const [showPassword, setShowPassword] = useState(false)
-  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
+  const [verificationStep, setVerificationStep] = useState(false)
+  const [verificationCode, setVerificationCode] = useState('')
   const [formData, setFormData] = useState({
-    fullName: '',
+    usuario: '',
+    nombre: '',
     email: '',
-    phone: '',
-    password: '',
-    confirmPassword: ''
+    telefono: '',
+    direccion: '',
+    contrasena: '',
   })
-
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log('Form submitted:', formData)
-  }
 
   const handleChange = (e) => {
     setFormData({
       ...formData,
       [e.target.name]: e.target.value
-    })
+    });
+  };
+
+  const validateForm = () => {
+    if (formData.contrasena.length < 8) {
+      toast.error('La contraseña debe tener al menos 8 caracteres')
+      return false
+    }
+    if (!formData.email.match(/^[^@]+@[^@]+\.[^@]+$/)) {
+      toast.error('El correo electrónico no es válido')
+      return false
+    }
+    return true
   }
 
-  const InputField = ({ icon: Icon, label, name, type = "text", placeholder, showPasswordToggle = false, isPassword = false }) => (
-    <div className="space-y-2">
-      <label className="text-sm font-medium text-gray-700" htmlFor={name}>
-        {label}
-      </label>
-      <motion.div
-        className="relative"
-        whileFocus={{ scale: 1.02 }}
-      >
-        <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-          <Icon className="h-5 w-5 text-gray-400" />
-        </div>
-        <input
-          id={name}
-          name={name}
-          type={isPassword ? (showPassword ? "text" : "password") : type}
-          required
-          value={formData[name]}
-          onChange={handleChange}
-          className="block w-full pl-10 pr-10 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base"
-          placeholder={placeholder}
-        />
-        {showPasswordToggle && (
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => setShowPassword(!showPassword)}
-            className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
-          >
-            {showPassword ? (
-              <EyeOff className="h-5 w-5" />
-            ) : (
-              <Eye className="h-5 w-5" />
-            )}
-          </motion.button>
-        )}
-      </motion.div>
-    </div>
-  )
+  const sendVerificationCode = async () => {
+    try {
+      const params = new URLSearchParams()
+      params.append('email', formData.email)
+
+      const response = await axios.post(
+        'http://localhost:8080/verification/send',
+        params.toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      )
+
+      if (response.status === 200) {
+        toast.success('Código de verificación enviado')
+        setVerificationStep(true)
+      }
+    } catch (error) {
+      console.error('Error al enviar código:', error)
+      toast.error('Error al enviar el código de verificación')
+    }
+  }
+
+  const verifyCode = async () => {
+    try {
+      const params = new URLSearchParams()
+      params.append('email', formData.email)
+      params.append('code', verificationCode)
+
+      const response = await axios.post(
+        'http://localhost:8080/verification/verify',
+        params.toString(),
+        {
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+        }
+      )
+
+      if (response.status === 200) {
+        setTimeout(() => {
+          router.push('/account/login'); 
+        }, 100);
+        return true
+      }
+      toast.success('Usuario registrado exitosamente', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
+    } catch (error) {
+      console.error('Error al verificar código:', error)
+      toast.error('Código de verificación inválido')
+      return false
+    }
+  }
+
+  const handleSubmit = async (e) => {
+    e.preventDefault()
+
+    if (!validateForm()) return
+
+    try {
+      if (!verificationStep) {
+        // Primer paso: enviar código de verificación
+        await sendVerificationCode()
+        return
+      }
+
+      // Segundo paso: verificar código y registrar usuario
+      const isCodeValid = await verifyCode()
+      if (!isCodeValid) return
+
+      // Registrar usuario
+      const userData = {
+        id: 0,
+        usuario: formData.usuario,
+        nombre: formData.nombre,
+        contrasena: formData.contrasena,
+        telefono: formData.telefono,
+        email: formData.email,
+        direccion: formData.direccion,
+        rol: "NORMAL"
+      }
+
+      const response = await axios.post(
+        'http://localhost:8080/usuarios/crearusuario',
+        userData,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+          },
+        }
+      )
+
+      if (response.status === 200) {
+        toast.success('Usuario registrado exitosamente')
+        router.push('/account/login')
+      }
+    } catch (error) {
+      console.error('Error en el registro:', error)
+      toast.error('Error al registrar usuario')
+    }
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100">
@@ -223,37 +298,176 @@ export default function RegisterPage() {
               className="space-y-6"
               onSubmit={handleSubmit}
             >
-              <InputField
-                icon={User}
-                label="Nombre Completo"
-                name="fullName"
-                placeholder="Juan Pérez"
-              />
+              {!verificationStep ? (
+                <>
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700" htmlFor="nombre">
+                      Nombre Completo
+                    </label>
+                    <motion.div
+                      className="relative"
+                      whileFocus={{ scale: 1.02 }}
+                    >
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="nombre"
+                        name="nombre"
+                        type="text"
+                        required
+                        value={formData.nombre}
+                        onChange={handleChange}
+                        className="block w-full pl-10 pr-3 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base"
+                        placeholder="John Doe"
+                      />
+                    </motion.div>
+                  </div>
 
-              <InputField
-                icon={Mail}
-                label="Correo Electrónico"
-                name="email"
-                type="email"
-                placeholder="ejemplo@correo.com"
-              />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700" htmlFor="usuario">
+                      Nombre de Usuario
+                    </label>
+                    <motion.div
+                      className="relative"
+                      whileFocus={{ scale: 1.02 }}
+                    >
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <User2 className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="usuario"
+                        name="usuario"
+                        type="text"
+                        required
+                        value={formData.usuario}
+                        onChange={handleChange}
+                        className="block w-full pl-10 pr-3 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base"
+                        placeholder="John Doe"
+                      />
+                    </motion.div>
+                  </div>
 
-              <InputField
-                icon={Phone}
-                label="Teléfono"
-                name="phone"
-                type="tel"
-                placeholder="+34 123 456 789"
-              />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700" htmlFor="email">
+                      Correo Electrónico
+                    </label>
+                    <motion.div
+                      className="relative"
+                      whileFocus={{ scale: 1.02 }}
+                    >
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Mail className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="email"
+                        name="email"
+                        type="email"
+                        required
+                        value={formData.email}
+                        onChange={handleChange}
+                        className="block w-full pl-10 pr-3 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base"
+                        placeholder="ejemplo@correo.com"
+                      />
+                    </motion.div>
+                  </div>
 
-              <InputField
-                icon={Lock}
-                label="Contraseña"
-                name="password"
-                placeholder="••••••••"
-                showPasswordToggle
-                isPassword
-              />
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700" htmlFor="telefono">
+                      Teléfono
+                    </label>
+                    <motion.div
+                      className="relative"
+                      whileFocus={{ scale: 1.02 }}
+                    >
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Phone className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="telefono"
+                        name="telefono"
+                        type="text"
+                        required
+                        value={formData.telefono}
+                        onChange={handleChange}
+                        className="block w-full pl-10 pr-3 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base"
+                        placeholder="0933322211"
+                      />
+                    </motion.div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700" htmlFor="direccion">
+                      Dirección
+                    </label>
+                    <motion.div
+                      className="relative"
+                      whileFocus={{ scale: 1.02 }}
+                    >
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <MapPin className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="direccion"
+                        name="direccion"
+                        type="text"
+                        required
+                        value={formData.direccion}
+                        onChange={handleChange}
+                        className="block w-full pl-10 pr-3 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base"
+                        placeholder="761 Kane Street, Morriston, American Samoa"
+                      />
+                    </motion.div>
+                  </div>
+
+                  <div className="space-y-2">
+                    <label className="text-sm font-medium text-gray-700" htmlFor="contrasena">
+                      Contraseña
+                    </label>
+                    <motion.div
+                      className="relative"
+                      whileFocus={{ scale: 1.02 }}
+                    >
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <Lock className="h-5 w-5 text-gray-400" />
+                      </div>
+                      <input
+                        id="contrasena"
+                        name="contrasena"
+                        type={showPassword ? "text" : "password"}
+                        required
+                        value={formData.contrasena}
+                        onChange={handleChange}
+                        className="block w-full pl-10 pr-10 py-2 sm:py-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 text-sm sm:text-base"
+                        placeholder="••••••••"
+                      />
+                      <motion.button
+                        type="button"
+                        whileHover={{ scale: 1.1 }}
+                        whileTap={{ scale: 0.9 }}
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="absolute inset-y-0 right-0 pr-3 flex items-center text-gray-400 hover:text-gray-600"
+                      >
+                        {showPassword ? (
+                          <EyeOff className="h-5 w-5" />
+                        ) : (
+                          <Eye className="h-5 w-5" />
+                        )}
+                      </motion.button>
+                    </motion.div>
+                  </div>
+                </>) : (
+                <div className="space-y-2">
+                  <label className="text-sm font-medium text-gray-700">Código de Verificación</label>
+                  <input
+                    type="text"
+                    value={verificationCode}
+                    onChange={(e) => setVerificationCode(e.target.value)}
+                    className="w-full p-2 border rounded-lg"
+                    required
+                  />
+                </div>
+              )}
 
               {/* Submit Button */}
               <motion.button
@@ -261,9 +475,12 @@ export default function RegisterPage() {
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
                 className="w-full flex justify-center py-2 sm:py-3 px-4 border border-transparent rounded-lg shadow-sm text-sm sm:text-base font-medium text-white bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-orange-500"
+                onClick={handleSubmit}
               >
-                Registrarse
+                {verificationStep ? 'Verificar y Registrar' : 'Enviar Código de Verificación'}
               </motion.button>
+
+              
 
               {/* Login Link */}
               <motion.div

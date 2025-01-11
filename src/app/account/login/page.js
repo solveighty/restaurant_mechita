@@ -77,7 +77,7 @@ export default function LoginPage() {
       toast.success('Bienvenido a Comidas Mechita', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
     } catch (error) {
       console.error('Error al iniciar sesión:');
-      toast.error('Error al iniciar sesión, revisa tus credenciales');
+      toast.error('Error al iniciar sesión, revisa tus credenciales', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
     }
   };
 
