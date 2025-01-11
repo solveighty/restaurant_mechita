@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell } from 'lucide-react'
+import { useRouter } from 'next/navigation'
 
 const menuVariants = {
   closed: {
@@ -35,6 +36,7 @@ export default function Navbar() {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false)
   const pathname = usePathname()
+  const router = useRouter()
 
   // Referencias para los menús
   const notificationRef = useRef(null)
@@ -57,6 +59,15 @@ export default function Navbar() {
     }
   }, [])
 
+  // Función de logout
+  const handleLogout = () => { // Verifica si se llama a esta función
+    localStorage.removeItem('token'); // Eliminar el token
+    setTimeout(() => {
+      setIsUserMenuOpen(false);
+      router.push('/account/login'); 
+    }, 100);
+  };
+
   // Verificar si estamos en una ruta de autenticación
   const isAuthRoute = pathname?.startsWith('/account/')
   
@@ -72,7 +83,7 @@ export default function Navbar() {
 
   const userNavigation = [
     { name: 'Perfil', href: '/user/profile', icon: UserCircle },
-    { name: 'Cerrar Sesión', href: '#', icon: LogOut, onClick: () => console.log('Cerrar sesión') },
+    { name: 'Cerrar Sesión', href: '#', icon: LogOut, onClick: handleLogout },
   ]
 
   const NavLink = ({ href, children, className = '', onClick }) => {
@@ -157,7 +168,6 @@ export default function Navbar() {
                   >
                     <div className="py-2">
                       <p className="px-4 py-2 text-sm text-gray-700">No tienes nuevas notificaciones</p>
-                      {/* Aquí puedes agregar más notificaciones si es necesario */}
                     </div>
                   </motion.div>
                 )}
@@ -183,9 +193,8 @@ export default function Navbar() {
                     transition={{ duration: 0.2 }}
                     className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1"
                   >
-                    {/* Aquí puedes agregar el contenido del menú de usuario */}
                     <Link href="/user/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</Link>
-                    <Link href="#" onClick={() => console.log('Cerrar sesión')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</Link>
+                    <Link href="#" onClick={handleLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</Link>
                   </motion.div>
                 )}
               </AnimatePresence>
