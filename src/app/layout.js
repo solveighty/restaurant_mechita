@@ -2,7 +2,7 @@ import Navbar from '@/components/Navbar'
 import './globals.css'
 
 export const metadata = {
-  title: 'Delicias Express',
+  title: 'Comidas Mechita',
   description: 'Tu restaurante favorito',
 }
 
