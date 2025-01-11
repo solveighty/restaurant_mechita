@@ -2,7 +2,6 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { User, Mail, Lock, Eye, EyeOff, Phone, Star, Gift, Clock } from 'lucide-react'
 
@@ -54,7 +53,7 @@ export default function RegisterPage() {
       <label className="text-sm font-medium text-gray-700" htmlFor={name}>
         {label}
       </label>
-      <motion.div 
+      <motion.div
         className="relative"
         whileFocus={{ scale: 1.02 }}
       >
@@ -94,7 +93,7 @@ export default function RegisterPage() {
     <div className="min-h-screen bg-gradient-to-br from-orange-50 to-red-100">
       <div className="flex min-h-screen">
         {/* Sección de Publicidad/Presentación */}
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, x: -50 }}
           animate={{ opacity: 1, x: 0 }}
           transition={{ duration: 0.8 }}
@@ -115,7 +114,7 @@ export default function RegisterPage() {
               </p>
             </motion.div>
 
-            <motion.div 
+            <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               transition={{ delay: 0.5 }}
@@ -123,7 +122,7 @@ export default function RegisterPage() {
             >
               {/* Beneficios para nuevos usuarios */}
               <div className="space-y-6">
-                <motion.div 
+                <motion.div
                   className="flex items-start space-x-4"
                   whileHover={{ x: 10 }}
                 >
@@ -136,7 +135,7 @@ export default function RegisterPage() {
                   </div>
                 </motion.div>
 
-                <motion.div 
+                <motion.div
                   className="flex items-start space-x-4"
                   whileHover={{ x: 10 }}
                 >
@@ -149,7 +148,7 @@ export default function RegisterPage() {
                   </div>
                 </motion.div>
 
-                <motion.div 
+                <motion.div
                   className="flex items-start space-x-4"
                   whileHover={{ x: 10 }}
                 >
@@ -162,27 +161,8 @@ export default function RegisterPage() {
                   </div>
                 </motion.div>
               </div>
-
-              {/* Imagen promocional */}
-              <motion.div
-                initial={{ opacity: 0, scale: 0.8 }}
-                animate={{ opacity: 1, scale: 1 }}
-                transition={{ delay: 0.7 }}
-                className="relative h-48 rounded-xl overflow-hidden shadow-2xl"
-              >
-                <Image
-                  src="/placeholder.jpg" // Reemplaza con tu imagen
-                  alt="Nuestros platos especiales"
-                  fill
-                  className="object-cover"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent flex items-end p-6">
-                  <p className="text-lg font-semibold">Descubre nuestra carta especial</p>
-                </div>
-              </motion.div>
             </motion.div>
 
-            {/* Testimonios o estadísticas */}
             <motion.div
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
@@ -224,7 +204,7 @@ export default function RegisterPage() {
           >
             {/* Header */}
             <motion.div variants={itemVariants} className="text-center">
-              <motion.h2 
+              <motion.h2
                 className="text-3xl sm:text-4xl font-bold text-gray-900 mb-2"
                 initial={{ scale: 0.5 }}
                 animate={{ scale: 1 }}
@@ -238,9 +218,9 @@ export default function RegisterPage() {
             </motion.div>
 
             {/* Form */}
-            <motion.form 
-              variants={itemVariants} 
-              className="space-y-6" 
+            <motion.form
+              variants={itemVariants}
+              className="space-y-6"
               onSubmit={handleSubmit}
             >
               <InputField
@@ -275,15 +255,6 @@ export default function RegisterPage() {
                 isPassword
               />
 
-              <InputField
-                icon={Lock}
-                label="Confirmar Contraseña"
-                name="confirmPassword"
-                placeholder="••••••••"
-                showPasswordToggle
-                isPassword
-              />
-
               {/* Submit Button */}
               <motion.button
                 type="submit"
@@ -295,13 +266,13 @@ export default function RegisterPage() {
               </motion.button>
 
               {/* Login Link */}
-              <motion.div 
+              <motion.div
                 variants={itemVariants}
                 className="text-center text-sm sm:text-base"
               >
                 <span className="text-gray-600">¿Ya tienes una cuenta? </span>
-                <Link 
-                  href="/access/login" 
+                <Link
+                  href="/account/login"
                   className="font-medium text-orange-600 hover:text-orange-500"
                 >
                   Inicia sesión aquí

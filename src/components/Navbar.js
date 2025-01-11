@@ -1,10 +1,10 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle } from 'lucide-react'
+import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell } from 'lucide-react'
 
 const menuVariants = {
   closed: {
@@ -33,10 +33,32 @@ const itemVariants = {
 export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
+  const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false)
   const pathname = usePathname()
 
+  // Referencias para los menús
+  const notificationRef = useRef(null)
+  const userMenuRef = useRef(null)
+
+  // Cerrar menús al hacer clic fuera de ellos
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setIsNotificationMenuOpen(false)
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
+
   // Verificar si estamos en una ruta de autenticación
-  const isAuthRoute = pathname?.startsWith('/access/')
+  const isAuthRoute = pathname?.startsWith('/account/')
   
   // Si estamos en una ruta de autenticación, no renderizar el navbar
   if (isAuthRoute) {
@@ -92,7 +114,7 @@ export default function Navbar() {
               className="flex-shrink-0 flex items-center"
             >
               <Link href="/" className="text-xl sm:text-2xl font-bold text-orange-500">
-                Delicias Express
+                Comidas Mechita
               </Link>
             </motion.div>
             
@@ -113,50 +135,60 @@ export default function Navbar() {
 
           {/* Botón de usuario y menú móvil */}
           <div className="flex items-center">
-            {/* Menú de usuario - Desktop */}
-            <div className="hidden sm:ml-6 sm:flex sm:items-center">
-              <motion.div
-                whileHover={{ scale: 1.05 }}
+            {/* Menú de notificaciones - Desktop y Mobile */}
+            <div className="relative" ref={notificationRef}>
+              <motion.button
                 whileTap={{ scale: 0.95 }}
-                className="relative"
+                onClick={() => setIsNotificationMenuOpen(!isNotificationMenuOpen)}
+                className="flex items-center text-gray-600 hover:text-orange-500 focus:outline-none p-2 rounded-full hover:bg-orange-50"
               >
-                <motion.button
-                  whileTap={{ scale: 0.95 }}
-                  onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
-                  className="flex items-center text-gray-600 hover:text-orange-500 focus:outline-none p-2 rounded-full hover:bg-orange-50"
-                >
-                  <User className="w-6 h-6" />
-                </motion.button>
+                <Bell className="w-6 h-6" />
+              </motion.button>
 
-                <AnimatePresence>
-                  {isUserMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      transition={{ duration: 0.2 }}
-                      className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1"
-                    >
-                      {userNavigation.map((item) => (
-                        <motion.div
-                          key={item.name}
-                          whileHover={{ backgroundColor: "#fff8f0" }}
-                          className="w-full"
-                        >
-                          <Link
-                            href={item.href}
-                            onClick={item.onClick}
-                            className="flex items-center px-4 py-2 text-sm text-gray-700 hover:text-orange-500"
-                          >
-                            <item.icon className="w-4 h-4 mr-2" />
-                            {item.name}
-                          </Link>
-                        </motion.div>
-                      ))}
-                    </motion.div>
-                  )}
-                </AnimatePresence>
-              </motion.div>
+              {/* Menú de notificaciones */}
+              <AnimatePresence>
+                {isNotificationMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1"
+                  >
+                    <div className="py-2">
+                      <p className="px-4 py-2 text-sm text-gray-700">No tienes nuevas notificaciones</p>
+                      {/* Aquí puedes agregar más notificaciones si es necesario */}
+                    </div>
+                  </motion.div>
+                )}
+              </AnimatePresence>
+            </div>
+
+            {/* Menú de usuario - Desktop y Mobile */}
+            <div className="relative" ref={userMenuRef}>
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                className="flex items-center text-gray-600 hover:text-orange-500 focus:outline-none p-2 rounded-full hover:bg-orange-50"
+              >
+                <User className="w-6 h-6" />
+              </motion.button>
+
+              <AnimatePresence>
+                {isUserMenuOpen && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, y: 10 }}
+                    transition={{ duration: 0.2 }}
+                    className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1"
+                  >
+                    {/* Aquí puedes agregar el contenido del menú de usuario */}
+                    <Link href="/user/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</Link>
+                    <Link href="#" onClick={() => console.log('Cerrar sesión')} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</Link>
+                  </motion.div>
+                )}
+              </AnimatePresence>
             </div>
 
             {/* Botón de menú móvil */}

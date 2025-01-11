@@ -2,9 +2,11 @@
 
 import { useState } from 'react'
 import Link from 'next/link'
-import Image from 'next/image'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
+import axios from 'axios';
+import { useRouter } from 'next/navigation';
+import { toast } from 'nextjs-toast-notify';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -27,16 +29,60 @@ const itemVariants = {
 }
 
 export default function LoginPage() {
+  const router = useRouter();
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
     password: ''
   })
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    console.log('Form submitted:', formData)
-  }
+  const [errors, setErrors] = useState({
+  });
+  
+  const validateForm = () => {
+    const errors = {};
+    const emailPattern = /^[^@]+@[^@]+\.[^@]+$/;
+  
+    if (!emailPattern.test(formData.email)) {
+      errors.email = 'Correo electrónico no válido';
+      toast.error('Correo electrónico no válido');
+    }
+  
+    if (formData.password.length < 8) {
+      errors.password = 'La contraseña debe tener al menos 8 caracteres';
+      toast.error('La contraseña debe tener al menos 8 caracteres');
+    }
+  
+    setErrors(errors);
+    return Object.keys(errors).length === 0;
+  };
+  
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!validateForm()) return;
+
+    try {
+      const response = await axios.post('http://localhost:8080/usuarios/login', null, {
+        params: {
+          identificador: formData.email,
+          contrasena: formData.password
+        }
+      });
+
+      if (response.status !== 200) {
+        throw new Error('Credenciales incorrectas');
+      }
+
+      const data = response.data;
+      localStorage.setItem('token', data.token);
+
+      router.push('/');
+    } catch (error) {
+      console.error('Error al iniciar sesión:', error.response || error.message);
+      toast.error('Error al iniciar sesión, revisa tus credenciales');
+    }
+  };
 
   const handleChange = (e) => {
     setFormData({
@@ -113,12 +159,7 @@ export default function LoginPage() {
               className="mt-8"
             >
               <div className="relative h-40 w-full rounded-xl overflow-hidden">
-                <Image
-                  src="/placeholder.jpg" // Reemplaza con tu imagen
-                  alt="Deliciosa comida"
-                  fill
-                  className="object-cover"
-                />
+               
               </div>
             </motion.div>
           </div>
@@ -252,7 +293,7 @@ export default function LoginPage() {
               >
                 <span className="text-gray-600">¿No tienes una cuenta? </span>
                 <Link 
-                  href="/access/register" 
+                  href="/account/register" 
                   className="font-medium text-orange-600 hover:text-orange-500"
                 >
                   Regístrate aquí
