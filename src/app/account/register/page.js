@@ -51,11 +51,11 @@ export default function RegisterPage() {
 
   const validateForm = () => {
     if (formData.contrasena.length < 8) {
-      toast.error('La contraseña debe tener al menos 8 caracteres')
+      toast.error('La contraseña debe tener al menos 8 caracteres', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
       return false
     }
     if (!formData.email.match(/^[^@]+@[^@]+\.[^@]+$/)) {
-      toast.error('El correo electrónico no es válido')
+      toast.error('El correo electrónico no es válido', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
       return false
     }
     return true
@@ -77,12 +77,12 @@ export default function RegisterPage() {
       )
 
       if (response.status === 200) {
-        toast.success('Código de verificación enviado')
+        toast.success('Código de verificación enviado', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
         setVerificationStep(true)
       }
     } catch (error) {
       console.error('Error al enviar código:', error)
-      toast.error('Error al enviar el código de verificación')
+      toast.error('Error al enviar el código de verificación', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
     }
   }
 
@@ -111,7 +111,7 @@ export default function RegisterPage() {
       toast.success('Usuario registrado exitosamente', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
     } catch (error) {
       console.error('Error al verificar código:', error)
-      toast.error('Código de verificación inválido')
+      toast.error('Código de verificación inválido', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
       return false
     }
   }
@@ -155,7 +155,7 @@ export default function RegisterPage() {
       )
 
       if (response.status === 200) {
-        toast.success('Usuario registrado exitosamente')
+        toast.success('Usuario registrado exitosamente', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
         router.push('/account/login')
       }
     } catch (error) {

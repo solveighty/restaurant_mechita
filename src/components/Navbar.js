@@ -6,6 +6,7 @@ import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
 import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell } from 'lucide-react'
 import { useRouter } from 'next/navigation'
+import { ShoppingCart } from 'lucide-react'
 
 const menuVariants = {
   closed: {
@@ -33,6 +34,7 @@ const itemVariants = {
 
 export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
+  const [isCartOpen, setIsCartOpen] = useState(false)
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false)
   const pathname = usePathname()
@@ -41,6 +43,7 @@ export default function Navbar() {
   // Referencias para los menús
   const notificationRef = useRef(null)
   const userMenuRef = useRef(null)
+  const cartRef = useRef(null)
 
   // Cerrar menús al hacer clic fuera de ellos
   useEffect(() => {
@@ -50,6 +53,9 @@ export default function Navbar() {
       }
       if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
         setIsUserMenuOpen(false)
+      }
+      if (cartRef.current && !cartRef.current.contains(event.target)) {
+        setIsCartOpen(false)
       }
     }
 
@@ -173,6 +179,107 @@ export default function Navbar() {
                 )}
               </AnimatePresence>
             </div>
+
+            {/* Carrito de Compras */}
+            <motion.div className="relative mr-4">
+              <motion.button
+                whileTap={{ scale: 0.95 }}
+                onClick={() => setIsCartOpen(!isCartOpen)}
+                className="flex items-center text-gray-600 hover:text-orange-500 focus:outline-none p-2 rounded-full hover:bg-orange-50"
+              >
+                <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
+                {/* Badge para cantidad de items */}
+                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  0
+                </span>
+              </motion.button>
+
+              <AnimatePresence>
+                {isCartOpen && (
+                  <>
+                    {/* Overlay para móviles */}
+                    <motion.div
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 bg-black bg-opacity-50 z-40 lg:hidden"
+                      onClick={() => setIsCartOpen(false)}
+                    />
+
+                    {/* Carrito para móviles */}
+                    <motion.div
+                      initial={{ x: '100%' }}
+                      animate={{ x: 0 }}
+                      exit={{ x: '100%' }}
+                      transition={{ type: "spring", bounce: 0, duration: 0.4 }}
+                      className="fixed right-0 top-0 h-full w-full sm:w-96 bg-white shadow-xl z-50 lg:hidden"
+                    >
+                      <div className="flex flex-col h-full">
+                        {/* Encabezado del carrito */}
+                        <div className="flex items-center justify-between p-4 border-b">
+                          <h3 className="text-lg font-semibold">Carrito de Compras</h3>
+                          <button
+                            onClick={() => setIsCartOpen(false)}
+                            className="p-2 hover:bg-gray-100 rounded-full"
+                          >
+                            <X className="w-5 h-5" />
+                          </button>
+                        </div>
+
+                        {/* Contenido del carrito */}
+                        <div className="flex-1 overflow-y-auto p-4">
+                          <p className="text-gray-500 text-center">No hay items en el carrito</p>
+                        </div>
+
+                        {/* Footer del carrito */}
+                        <div className="border-t p-4">
+                          <div className="flex justify-between mb-4">
+                            <span className="font-semibold">Total:</span>
+                            <span className="font-semibold">$0.00</span>
+                          </div>
+                          <button
+                            className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
+                          >
+                            Ir a Pagar
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+
+                    {/* Carrito para desktop */}
+                    <motion.div
+                      initial={{ opacity: 0, y: 10 }}
+                      animate={{ opacity: 1, y: 0 }}
+                      exit={{ opacity: 0, y: 10 }}
+                      transition={{ duration: 0.2 }}
+                      className="absolute right-0 mt-2 w-96 rounded-lg shadow-lg bg-white ring-1 ring-black ring-opacity-5 hidden lg:block"
+                    >
+                      <div className="p-4">
+                        <h3 className="text-lg font-semibold mb-4">Carrito de Compras</h3>
+                        
+                        {/* Lista de items */}
+                        <div className="max-h-96 overflow-y-auto mb-4">
+                          <p className="text-gray-500 text-center py-4">No hay items en el carrito</p>
+                        </div>
+
+                        {/* Footer */}
+                        <div className="border-t pt-4">
+                          <div className="flex justify-between mb-4">
+                            <span className="font-semibold">Total:</span>
+                            <span className="font-semibold">$0.00</span>
+                          </div>
+                          <button
+                            className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
+                          >
+                            Ir a Pagar
+                          </button>
+                        </div>
+                      </div>
+                    </motion.div>
+                  </>
+                )}
+              </AnimatePresence>
+            </motion.div>
 
             {/* Menú de usuario - Desktop y Mobile */}
             <div className="relative" ref={userMenuRef}>

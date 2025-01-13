@@ -1,6 +1,7 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
+import axios from 'axios'
 import { ChevronDown, ChevronUp, ShoppingCart, X } from 'lucide-react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -47,41 +48,69 @@ const modalVariants = {
   }
 }
 
-const menuItems = [
-  { 
-    id: 1, 
-    name: 'Paella Valenciana', 
-    description: 'Auténtica paella española con mariscos frescos, azafrán y arroz bomba', 
-    price: 25.99, 
-    image: '/placeholder.svg?height=300&width=300', 
-    category: 'Platos Especiales',
-    ingredients: ['Arroz bomba', 'Mariscos frescos', 'Azafrán', 'Pimientos', 'Guisantes']
-  },
-  { 
-    id: 2, 
-    name: 'Hamburguesa Gourmet', 
-    description: 'Hamburguesa artesanal con carne Angus, queso cheddar madurado y bacon ahumado', 
-    price: 18.99, 
-    image: '/placeholder.svg?height=300&width=300', 
-    category: 'Comidas Rápidas',
-    ingredients: ['Carne Angus', 'Queso cheddar', 'Bacon ahumado', 'Pan artesanal', 'Vegetales frescos']
-  },
-  { 
-    id: 3, 
-    name: 'Croquetas de Jamón', 
-    description: 'Croquetas caseras de jamón ibérico con bechamel cremosa', 
-    price: 12.99, 
-    image: '/placeholder.svg?height=300&width=300', 
-    category: 'Bocaditos',
-    ingredients: ['Jamón ibérico', 'Bechamel', 'Pan rallado', 'Huevo', 'Especias']
-  },
-]
-
 export default function MenuDisplay() {
+  const [menuItems, setMenuItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
   const [quantity, setQuantity] = useState(1)
 
-  const categories = ['Platos Especiales', 'Comidas Rápidas', 'Bocaditos']
+  useEffect(() => {
+    const fetchMenus = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) {
+          throw new Error('No se encontró el token de autenticación')
+        }
+
+        const response = await axios.get('http://localhost:8080/menu', {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+
+        setMenuItems(response.data)
+        setLoading(false)
+      } catch (error) {
+        console.error('Error al obtener el menú:', error)
+        setError('Error al cargar el menú')
+        setLoading(false)
+      }
+    }
+
+    fetchMenus()
+  }, [])
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      </div>
+    )
+  }
+
+  if (error) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-red-500 text-center">
+          <p className="text-xl font-semibold">{error}</p>
+          <button 
+            onClick={() => window.location.reload()} 
+            className="mt-4 px-4 py-2 bg-orange-500 text-white rounded-lg hover:bg-orange-600"
+          >
+            Reintentar
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  const categories = [
+    { id: 'COMIDAS_RAPIDAS', display: 'Comidas Rápidas' },
+    { id: 'PLATOS_ESPECIALES', display: 'Platos Especiales' },
+    { id: 'BOCADITOS', display: 'Bocaditos' }
+  ]
 
   const handleItemClick = (item) => {
     setSelectedItem(item)
@@ -97,7 +126,7 @@ export default function MenuDisplay() {
   }
 
   const handleAddToCart = () => {
-    console.log(`Added ${quantity} ${selectedItem?.name} to cart`)
+    console.log(`Added ${quantity} ${selectedItem?.nombre} to cart`)
     handleCloseModal()
   }
 
@@ -139,9 +168,9 @@ export default function MenuDisplay() {
       </motion.div>
 
       {/* Categorías con grid responsive */}
-      {categories.map((category, categoryIndex) => (
+      {categories.map((category) => (
         <motion.div
-          key={category}
+          key={category.id}
           initial="hidden"
           whileInView="visible"
           viewport={{ once: true, margin: "-100px" }}
@@ -152,15 +181,18 @@ export default function MenuDisplay() {
             variants={itemVariants}
             className="text-center mb-6 sm:mb-8"
           >
-            <h2 className="text-2xl sm:text-3xl font-serif text-[#2c1810] mb-2">{category}</h2>
+            <h2 className="text-2xl sm:text-3xl font-serif text-[#2c1810] mb-2">
+              {category.display}
+            </h2>
             <div className="w-12 sm:w-16 h-0.5 bg-orange-400 mx-auto"></div>
           </motion.div>
+          
           <motion.div 
             variants={containerVariants}
             className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 lg:gap-8 px-2 sm:px-4"
           >
             {menuItems
-              .filter((item) => item.category === category)
+              .filter((item) => item.categoria === category.id)
               .map((item) => (
                 <motion.div
                   key={item.id}
@@ -172,21 +204,23 @@ export default function MenuDisplay() {
                 >
                   <div className="relative h-48 sm:h-56 lg:h-64">
                     <Image 
-                      src={item.image} 
-                      alt={item.name}
+                      src={item.imagen}
+                      alt={item.nombre}
                       fill
                       className="object-cover"
+                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
+                      priority={true}
                     />
                   </div>
                   <div className="p-4 sm:p-6">
                     <h3 className="font-serif text-lg sm:text-xl font-semibold text-[#2c1810] mb-2">
-                      {item.name}
+                      {item.nombre}
                     </h3>
                     <p className="text-gray-600 text-sm sm:text-base mb-3 sm:mb-4 line-clamp-2">
-                      {item.description}
+                      {item.descripcion}
                     </p>
                     <p className="text-orange-500 font-bold text-lg sm:text-xl">
-                      ${item.price.toFixed(2)}
+                      ${item.precio.toFixed(2)}
                     </p>
                   </div>
                 </motion.div>
@@ -230,8 +264,8 @@ export default function MenuDisplay() {
                   className="relative w-full md:w-1/2 h-56 sm:h-64 md:h-auto"
                 >
                   <Image 
-                    src={selectedItem.image} 
-                    alt={selectedItem.name}
+                    src={selectedItem.imagen} 
+                    alt={selectedItem.nombre}
                     fill
                     className="object-cover"
                   />
@@ -243,21 +277,13 @@ export default function MenuDisplay() {
                   className="w-full md:w-1/2 p-4 sm:p-6 md:p-8"
                 >
                   <h3 className="font-serif text-2xl sm:text-3xl font-bold text-[#2c1810] mb-3 sm:mb-4">
-                    {selectedItem.name}
+                    {selectedItem.nombre}
                   </h3>
                   <p className="text-gray-600 text-sm sm:text-base mb-4 sm:mb-6">
-                    {selectedItem.description}
+                    {selectedItem.descripcion}
                   </p>
-                  <div className="mb-4 sm:mb-6">
-                    <h4 className="font-semibold text-[#2c1810] mb-2">Ingredientes:</h4>
-                    <ul className="list-disc list-inside text-gray-600 text-sm sm:text-base">
-                      {selectedItem.ingredients.map((ingredient, index) => (
-                        <li key={index}>{ingredient}</li>
-                      ))}
-                    </ul>
-                  </div>
                   <p className="text-orange-500 font-bold text-xl sm:text-2xl mb-4 sm:mb-6">
-                    ${selectedItem.price.toFixed(2)}
+                    ${selectedItem.precio.toFixed(2)}
                   </p>
                   <div className="flex items-center justify-between mb-4 sm:mb-6 bg-gray-50 rounded-lg p-2 sm:p-3">
                     <button
