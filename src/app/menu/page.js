@@ -207,7 +207,7 @@ export default function MenuDisplay() {
                       src={item.imagen}
                       alt={item.nombre}
                       fill
-                      className="object-cover"
+                      className="object-fill"
                       sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
                       priority={true}
                     />
@@ -267,7 +267,7 @@ export default function MenuDisplay() {
                     src={selectedItem.imagen} 
                     alt={selectedItem.nombre}
                     fill
-                    className="object-cover"
+                    className="object-fill"
                   />
                 </motion.div>
                 <motion.div 

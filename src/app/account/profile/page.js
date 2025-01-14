@@ -1,5 +1,8 @@
 'use client'
 
+import { useState, useEffect } from 'react'
+import axios from 'axios'
+import { decodeJwt } from 'jose'
 import { motion } from 'framer-motion'
 import { User, Mail, Phone, MapPin, Edit2, Calendar, Shield } from 'lucide-react'
 
@@ -26,14 +29,33 @@ const itemVariants = {
 }
 
 export default function ProfilePage() {
-  const userProfile = {
-    fullName: "Juan Pérez",
-    username: "juanito123",
-    email: "juan@ejemplo.com",
-    phone: "+34 123 456 789",
-    address: "Calle Example 123, Ciudad",
-    memberSince: "Enero 2024"
-  }
+  const [userProfile, setUserProfile] = useState(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const token = localStorage.getItem('token')
+        if (!token) throw new Error('No token found')
+
+        const { id: userId } = decodeJwt(token) 
+        const response = await axios.get(`http://localhost:8080/usuarios/obtenerusuario/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        })
+
+        setUserProfile(response.data) 
+        setLoading(false)
+      } catch (err) {
+        setError(err.message)
+        setLoading(false)
+      }
+    }
+
+    fetchUserProfile()
+  }, [])
 
   const ProfileCard = ({ icon: Icon, title, value }) => (
     <motion.div
@@ -58,6 +80,14 @@ export default function ProfilePage() {
       </motion.button>
     </motion.div>
   )
+
+  if (loading) {
+    return <div className="text-center mt-10">Cargando perfil...</div>
+  }
+
+  if (error) {
+    return <div className="text-center mt-10 text-red-500">Error: {error}</div>
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
@@ -98,7 +128,7 @@ export default function ProfilePage() {
                 transition={{ delay: 0.3 }}
                 className="text-2xl sm:text-3xl font-bold"
               >
-                {userProfile.fullName}
+                {userProfile.nombre}
               </motion.h1>
               <motion.p 
                 initial={{ opacity: 0, x: -20 }}
@@ -106,7 +136,7 @@ export default function ProfilePage() {
                 transition={{ delay: 0.4 }}
                 className="text-orange-100"
               >
-                @{userProfile.username}
+                @{userProfile.usuario}
               </motion.p>
             </div>
           </div>
@@ -119,7 +149,7 @@ export default function ProfilePage() {
           >
             <div className="flex items-center">
               <Calendar size={16} className="mr-2" />
-              <span>Miembro desde {userProfile.memberSince}</span>
+              <span>Miembro desde {userProfile.miembroDesde}</span>
             </div>
             <div className="flex items-center">
               <Shield size={16} className="mr-2" />
@@ -136,7 +166,7 @@ export default function ProfilePage() {
           <ProfileCard
             icon={User}
             title="Nombre Completo"
-            value={userProfile.fullName}
+            value={userProfile.nombre}
           />
           <ProfileCard
             icon={Mail}
@@ -146,27 +176,14 @@ export default function ProfilePage() {
           <ProfileCard
             icon={Phone}
             title="Teléfono"
-            value={userProfile.phone}
+            value={userProfile.telefono}
           />
           <ProfileCard
             icon={MapPin}
             title="Dirección"
-            value={userProfile.address}
+            value={userProfile.direccion}
           />
         </motion.div>
-
-        {/* Botón de actualizar perfil */}
-        <motion.button
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          whileHover={{ scale: 1.02, boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)" }}
-          whileTap={{ scale: 0.98 }}
-          transition={{ duration: 0.2 }}
-          className="mt-6 sm:mt-8 w-full bg-gradient-to-r from-orange-400 to-red-500 text-white py-2 sm:py-3 px-4 sm:px-6 rounded-lg font-medium shadow-lg hover:shadow-xl transition-shadow duration-300 flex items-center justify-center space-x-2"
-        >
-          <Edit2 size={18} className="sm:w-5 sm:h-5" />
-          <span className="text-sm sm:text-base">Actualizar Perfil</span>
-        </motion.button>
       </motion.div>
     </div>
   )
