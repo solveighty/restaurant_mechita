@@ -4,92 +4,31 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell } from 'lucide-react'
+import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell, Trash2 } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { ShoppingCart } from 'lucide-react'
 import * as jose from 'jose'
 import axios from 'axios'
 import Image from 'next/image'
+import { useCart } from '@/context/CartContext'
+import CartItem from './Cart/CartItem'
+import CartFooter from './Cart/CartFooter'
 
 
 export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false)
-  const [cartItems, setCartItems] = useState([])
-  const [loading, setLoading] = useState(true)
-  const [userId, setUserId] = useState(null)
   const pathname = usePathname()
   const router = useRouter()
+  const { cartItems, loading, fetchCartItems } = useCart()
 
   // Referencias para los menús
   const notificationRef = useRef(null)
   const userMenuRef = useRef(null)
   const cartRef = useRef(null)
 
-  // Obtener userId del token
-  useEffect(() => {
-    const token = localStorage.getItem('token')
-    if (token) {
-      try {
-        const decodedToken = jose.decodeJwt(token)
-        setUserId(decodedToken.id)
-      } catch (error) {
-        console.error('Error al decodificar el token:', error)
-      }
-    }
-  }, [])
-
-  // Cargar items del carrito
-  useEffect(() => {
-    const fetchCartItems = async () => {
-      if (!userId) return
-
-      try {
-        const token = localStorage.getItem('token')
-        const response = await axios.get(`http://localhost:8080/carrito/${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
-        console.log('Respuesta del servidor:', response.data)
-        console.log('Items del carrito:', response.data.items)
-        setCartItems(response.data.items || [])
-      } catch (error) {
-        console.error('Error al obtener items del carrito:', error)
-        setCartItems([])
-      } finally {
-        setLoading(false)
-      }
-    }
-
-    if (userId) {
-      fetchCartItems()
-    }
-  }, [userId, isCartOpen])
-
-  // Cerrar menús al hacer clic fuera de ellos
-  useEffect(() => {
-    const handleClickOutside = (event) => {
-      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
-        setIsNotificationMenuOpen(false)
-      }
-      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
-        setIsUserMenuOpen(false)
-      }
-      if (cartRef.current && !cartRef.current.contains(event.target)) {
-        setIsCartOpen(false)
-      }
-    }
-
-    document.addEventListener('mousedown', handleClickOutside)
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside)
-    }
-  }, [])
-
-  // Función de logout
+  // Función de logout (mover antes de userNavigation)
   const handleLogout = () => {
     localStorage.removeItem('token');
     setTimeout(() => {
@@ -97,14 +36,6 @@ export default function Navbar() {
       router.push('/account/login'); 
     }, 100);
   };
-
-  // Verificar si estamos en una ruta de autenticación
-  const isAuthRoute = pathname?.startsWith('/account/login') || pathname?.startsWith('/account/register');
-  
-  // Si estamos en una ruta de autenticación, no renderizar el navbar
-  if (isAuthRoute) {
-    return null;
-  }
 
   const navigation = [
     { name: 'Menú', href: '/menu', icon: Book },
@@ -115,6 +46,14 @@ export default function Navbar() {
     { name: 'Perfil', href: '/account/profile', icon: UserCircle },
     { name: 'Cerrar Sesión', href: '#', icon: LogOut, onClick: handleLogout },
   ]
+
+  // Verificar si estamos en una ruta de autenticación
+  const isAuthRoute = pathname?.startsWith('/account/login') || pathname?.startsWith('/account/register');
+  
+  // Si estamos en una ruta de autenticación, no renderizar el navbar
+  if (isAuthRoute) {
+    return null;
+  }
 
   const NavLink = ({ href, children, className = '', onClick }) => {
     const isActive = pathname === href
@@ -137,6 +76,14 @@ export default function Navbar() {
         </Link>
       </motion.div>
     )
+  }
+
+  // Solo recargar cuando se abre el carrito
+  const handleCartClick = () => {
+    if (!isCartOpen) {
+      fetchCartItems() // Solo cargar cuando se abre
+    }
+    setIsCartOpen(!isCartOpen)
   }
 
   return (
@@ -208,14 +155,16 @@ export default function Navbar() {
             <motion.div className="relative mr-4" ref={cartRef}>
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setIsCartOpen(!isCartOpen)}
+                onClick={handleCartClick}
                 className="flex items-center text-gray-600 hover:text-orange-500 focus:outline-none p-2 rounded-full hover:bg-orange-50"
               >
                 <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
                 {/* Badge para cantidad de items */}
-                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  {cartItems.length}
-                </span>
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {cartItems.length}
+                  </span>
+                )}
               </motion.button>
 
               <AnimatePresence>
@@ -261,45 +210,14 @@ export default function Navbar() {
                           ) : (
                             <div className="space-y-4">
                               {cartItems.map((item) => (
-                                <div key={item.id} className="flex items-center space-x-4 border-b pb-4">
-                                  <div className="relative h-16 w-16">
-                                    <Image
-                                      src={item.menu.imagen}
-                                      alt={item.menu.nombre}
-                                      fill
-                                      className="object-cover rounded-md"
-                                    />
-                                  </div>
-                                  <div className="flex-1">
-                                    <h4 className="font-medium text-gray-800">{item.menu.nombre}</h4>
-                                    <p className="text-sm text-gray-500">
-                                      Cantidad: {item.cantidad}
-                                    </p>
-                                    <p className="text-orange-500 font-medium">
-                                      ${(item.menu.precio * item.cantidad).toFixed(2)}
-                                    </p>
-                                  </div>
-                                </div>
+                                <CartItem key={item.id} item={item} />
                               ))}
                             </div>
                           )}
                         </div>
 
                         {/* Footer del carrito */}
-                        <div className="border-t p-4">
-                          <div className="flex justify-between mb-4">
-                            <span className="font-semibold">Total:</span>
-                            <span className="font-semibold">
-                              ${cartItems.reduce((total, item) => total + (item.menu.precio * item.cantidad), 0).toFixed(2)}
-                            </span>
-                          </div>
-                          <button
-                            className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
-                            disabled={cartItems.length === 0}
-                          >
-                            Ir a Pagar
-                          </button>
-                        </div>
+                        <CartFooter onClose={() => setIsCartOpen(false)} />
                       </div>
                     </motion.div>
 
@@ -325,45 +243,14 @@ export default function Navbar() {
                           ) : (
                             <div className="space-y-4">
                               {cartItems.map((item) => (
-                                <div key={item.id} className="flex items-center space-x-4 border-b pb-4">
-                                  <div className="relative h-16 w-16">
-                                    <Image
-                                      src={item.menu.imagen}
-                                      alt={item.menu.nombre}
-                                      fill
-                                      className="object-cover rounded-md"
-                                    />
-                                  </div>
-                                  <div className="flex-1">
-                                    <h4 className="font-medium text-gray-800">{item.menu.nombre}</h4>
-                                    <p className="text-sm text-gray-500">
-                                      Cantidad: {item.cantidad}
-                                    </p>
-                                    <p className="text-orange-500 font-medium">
-                                      ${(item.menu.precio * item.cantidad).toFixed(2)}
-                                    </p>
-                                  </div>
-                                </div>
+                                <CartItem key={item.id} item={item} />
                               ))}
                             </div>
                           )}
                         </div>
 
                         {/* Footer */}
-                        <div className="border-t pt-4">
-                          <div className="flex justify-between mb-4">
-                            <span className="font-semibold">Total:</span>
-                            <span className="font-semibold">
-                              ${cartItems.reduce((total, item) => total + (item.menu.precio * item.cantidad), 0).toFixed(2)}
-                            </span>
-                          </div>
-                          <button
-                            className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
-                            disabled={cartItems.length === 0}
-                          >
-                            Ir a Pagar
-                          </button>
-                        </div>
+                        <CartFooter onClose={() => setIsCartOpen(false)} />
                       </div>
                     </motion.div>
                   </>

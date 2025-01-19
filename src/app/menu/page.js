@@ -6,6 +6,7 @@ import { ChevronDown, ChevronUp, ShoppingCart, X } from 'lucide-react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as jose from 'jose'
+import { toast } from 'react-toastify';
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -165,6 +166,7 @@ export default function MenuDisplay() {
       if (response.status === 200 || response.status === 201) {
         // Puedes agregar aquí alguna notificación de éxito
         console.log('Producto agregado al carrito exitosamente')
+        toast.success('Producto agregado al carrito exitosamente', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
         handleCloseModal()
       }
     } catch (error) {
