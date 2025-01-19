@@ -5,6 +5,7 @@ import axios from 'axios'
 import { ChevronDown, ChevronUp, ShoppingCart, X } from 'lucide-react'
 import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
+import * as jose from 'jose'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -54,6 +55,19 @@ export default function MenuDisplay() {
   const [error, setError] = useState(null)
   const [selectedItem, setSelectedItem] = useState(null)
   const [quantity, setQuantity] = useState(1)
+  const [userId, setUserId] = useState(null)
+
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const decodedToken = jose.decodeJwt(token)
+        setUserId(decodedToken.id)
+      } catch (error) {
+        console.error('Error al decodificar el token:', error)
+      }
+    }
+  }, [])
 
   useEffect(() => {
     const fetchMenus = async () => {
@@ -125,9 +139,38 @@ export default function MenuDisplay() {
     setQuantity(Math.max(1, quantity + change))
   }
 
-  const handleAddToCart = () => {
-    console.log(`Added ${quantity} ${selectedItem?.nombre} to cart`)
-    handleCloseModal()
+  const handleAddToCart = async () => {
+    if (!selectedItem || !quantity || !userId) {
+      console.error('Faltan datos necesarios para agregar al carrito')
+      return
+    }
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.post(
+        'http://localhost:8080/carrito/agregar',
+        {
+          usuarioId: userId,
+          menuId: selectedItem.id,
+          cantidad: quantity
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+
+      if (response.status === 200 || response.status === 201) {
+        // Puedes agregar aquí alguna notificación de éxito
+        console.log('Producto agregado al carrito exitosamente')
+        handleCloseModal()
+      }
+    } catch (error) {
+      console.error('Error al agregar al carrito:', error)
+      // Puedes agregar aquí alguna notificación de error
+    }
   }
 
   return (

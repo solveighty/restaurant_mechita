@@ -7,36 +7,18 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell } from 'lucide-react'
 import { useRouter } from 'next/navigation'
 import { ShoppingCart } from 'lucide-react'
+import * as jose from 'jose'
+import axios from 'axios'
+import Image from 'next/image'
 
-const menuVariants = {
-  closed: {
-    opacity: 0,
-    height: 0,
-    transition: {
-      duration: 0.3,
-      ease: "easeInOut"
-    }
-  },
-  open: {
-    opacity: 1,
-    height: "auto",
-    transition: {
-      duration: 0.3,
-      ease: "easeInOut"
-    }
-  }
-}
-
-const itemVariants = {
-  closed: { opacity: 0, x: -16 },
-  open: { opacity: 1, x: 0 }
-}
 
 export default function Navbar() {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false)
   const [isCartOpen, setIsCartOpen] = useState(false)
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false)
+  const [cartItems, setCartItems] = useState([])
+  const [loading, setLoading] = useState(true)
+  const [userId, setUserId] = useState(null)
   const pathname = usePathname()
   const router = useRouter()
 
@@ -44,6 +26,48 @@ export default function Navbar() {
   const notificationRef = useRef(null)
   const userMenuRef = useRef(null)
   const cartRef = useRef(null)
+
+  // Obtener userId del token
+  useEffect(() => {
+    const token = localStorage.getItem('token')
+    if (token) {
+      try {
+        const decodedToken = jose.decodeJwt(token)
+        setUserId(decodedToken.id)
+      } catch (error) {
+        console.error('Error al decodificar el token:', error)
+      }
+    }
+  }, [])
+
+  // Cargar items del carrito
+  useEffect(() => {
+    const fetchCartItems = async () => {
+      if (!userId) return
+
+      try {
+        const token = localStorage.getItem('token')
+        const response = await axios.get(`http://localhost:8080/carrito/${userId}`, {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        })
+        console.log('Respuesta del servidor:', response.data)
+        console.log('Items del carrito:', response.data.items)
+        setCartItems(response.data.items || [])
+      } catch (error) {
+        console.error('Error al obtener items del carrito:', error)
+        setCartItems([])
+      } finally {
+        setLoading(false)
+      }
+    }
+
+    if (userId) {
+      fetchCartItems()
+    }
+  }, [userId, isCartOpen])
 
   // Cerrar menús al hacer clic fuera de ellos
   useEffect(() => {
@@ -181,7 +205,7 @@ export default function Navbar() {
             </div>
 
             {/* Carrito de Compras */}
-            <motion.div className="relative mr-4">
+            <motion.div className="relative mr-4" ref={cartRef}>
               <motion.button
                 whileTap={{ scale: 0.95 }}
                 onClick={() => setIsCartOpen(!isCartOpen)}
@@ -190,7 +214,7 @@ export default function Navbar() {
                 <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
                 {/* Badge para cantidad de items */}
                 <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                  0
+                  {cartItems.length}
                 </span>
               </motion.button>
 
@@ -226,19 +250,52 @@ export default function Navbar() {
                           </button>
                         </div>
 
-                        {/* Contenido del carrito */}
+                        {/* Contenido del carrito - Mobile */}
                         <div className="flex-1 overflow-y-auto p-4">
-                          <p className="text-gray-500 text-center">No hay items en el carrito</p>
+                          {loading ? (
+                            <div className="flex justify-center items-center h-32">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                            </div>
+                          ) : cartItems.length === 0 ? (
+                            <p className="text-gray-500 text-center">No hay items en el carrito</p>
+                          ) : (
+                            <div className="space-y-4">
+                              {cartItems.map((item) => (
+                                <div key={item.id} className="flex items-center space-x-4 border-b pb-4">
+                                  <div className="relative h-16 w-16">
+                                    <Image
+                                      src={item.menu.imagen}
+                                      alt={item.menu.nombre}
+                                      fill
+                                      className="object-cover rounded-md"
+                                    />
+                                  </div>
+                                  <div className="flex-1">
+                                    <h4 className="font-medium text-gray-800">{item.menu.nombre}</h4>
+                                    <p className="text-sm text-gray-500">
+                                      Cantidad: {item.cantidad}
+                                    </p>
+                                    <p className="text-orange-500 font-medium">
+                                      ${(item.menu.precio * item.cantidad).toFixed(2)}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* Footer del carrito */}
                         <div className="border-t p-4">
                           <div className="flex justify-between mb-4">
                             <span className="font-semibold">Total:</span>
-                            <span className="font-semibold">$0.00</span>
+                            <span className="font-semibold">
+                              ${cartItems.reduce((total, item) => total + (item.menu.precio * item.cantidad), 0).toFixed(2)}
+                            </span>
                           </div>
                           <button
                             className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
+                            disabled={cartItems.length === 0}
                           >
                             Ir a Pagar
                           </button>
@@ -259,17 +316,50 @@ export default function Navbar() {
                         
                         {/* Lista de items */}
                         <div className="max-h-96 overflow-y-auto mb-4">
-                          <p className="text-gray-500 text-center py-4">No hay items en el carrito</p>
+                          {loading ? (
+                            <div className="flex justify-center items-center h-32">
+                              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+                            </div>
+                          ) : cartItems.length === 0 ? (
+                            <p className="text-gray-500 text-center py-4">No hay items en el carrito</p>
+                          ) : (
+                            <div className="space-y-4">
+                              {cartItems.map((item) => (
+                                <div key={item.id} className="flex items-center space-x-4 border-b pb-4">
+                                  <div className="relative h-16 w-16">
+                                    <Image
+                                      src={item.menu.imagen}
+                                      alt={item.menu.nombre}
+                                      fill
+                                      className="object-cover rounded-md"
+                                    />
+                                  </div>
+                                  <div className="flex-1">
+                                    <h4 className="font-medium text-gray-800">{item.menu.nombre}</h4>
+                                    <p className="text-sm text-gray-500">
+                                      Cantidad: {item.cantidad}
+                                    </p>
+                                    <p className="text-orange-500 font-medium">
+                                      ${(item.menu.precio * item.cantidad).toFixed(2)}
+                                    </p>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
                         </div>
 
                         {/* Footer */}
                         <div className="border-t pt-4">
                           <div className="flex justify-between mb-4">
                             <span className="font-semibold">Total:</span>
-                            <span className="font-semibold">$0.00</span>
+                            <span className="font-semibold">
+                              ${cartItems.reduce((total, item) => total + (item.menu.precio * item.cantidad), 0).toFixed(2)}
+                            </span>
                           </div>
                           <button
-                            className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors"
+                            className="w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+                            disabled={cartItems.length === 0}
                           >
                             Ir a Pagar
                           </button>
@@ -306,87 +396,9 @@ export default function Navbar() {
                 )}
               </AnimatePresence>
             </div>
-
-            {/* Botón de menú móvil */}
-            <div className="flex items-center sm:hidden">
-              <motion.button
-                whileTap={{ scale: 0.95 }}
-                onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                className="inline-flex items-center justify-center p-2 rounded-md text-gray-600 hover:text-orange-500 hover:bg-orange-50 focus:outline-none"
-              >
-                <motion.div
-                  animate={{ rotate: isMobileMenuOpen ? 180 : 0 }}
-                  transition={{ duration: 0.2 }}
-                >
-                  {isMobileMenuOpen ? (
-                    <X className="w-6 h-6" />
-                  ) : (
-                    <MenuIcon className="w-6 h-6" />
-                  )}
-                </motion.div>
-              </motion.button>
-            </div>
           </div>
         </div>
       </div>
-
-      {/* Menú móvil */}
-      <AnimatePresence>
-        {isMobileMenuOpen && (
-          <motion.div
-            initial="closed"
-            animate="open"
-            exit="closed"
-            variants={menuVariants}
-            className="sm:hidden bg-white border-t border-gray-200"
-          >
-            <div className="pt-2 pb-3 space-y-1">
-              {navigation.map((item) => (
-                <motion.div
-                  key={item.name}
-                  variants={itemVariants}
-                  className="w-full"
-                >
-                  <NavLink
-                    href={item.href}
-                    className="flex items-center px-4 py-2 text-base"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    <item.icon className="w-5 h-5 mr-3" />
-                    {item.name}
-                  </NavLink>
-                </motion.div>
-              ))}
-            </div>
-            <motion.div 
-              variants={itemVariants}
-              className="pt-4 pb-3 border-t border-gray-200"
-            >
-              <div className="space-y-1">
-                {userNavigation.map((item) => (
-                  <motion.div
-                    key={item.name}
-                    whileHover={{ backgroundColor: "#fff8f0" }}
-                    className="w-full"
-                  >
-                    <Link
-                      href={item.href}
-                      onClick={(e) => {
-                        setIsMobileMenuOpen(false)
-                        item.onClick?.(e)
-                      }}
-                      className="flex items-center px-4 py-2 text-base text-gray-600 hover:text-orange-500"
-                    >
-                      <item.icon className="w-5 h-5 mr-3" />
-                      {item.name}
-                    </Link>
-                  </motion.div>
-                ))}
-              </div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
     </motion.nav>
   )
 } 
