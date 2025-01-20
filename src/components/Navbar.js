@@ -9,6 +9,8 @@ import { ShoppingCart } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import CartItem from './Cart/CartItem'
 import CartFooter from './Cart/CartFooter'
+import { useNotifications } from '@/context/NotificationContext'
+import NotificationItem from './Notifications/NotificationItem'
 
 
 export default function Navbar() {
@@ -17,7 +19,8 @@ export default function Navbar() {
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const { cartItems, loading } = useCart()
+  const { cartItems, loading: cartLoading } = useCart()
+  const { notifications, loading: notificationsLoading, markAsRead } = useNotifications()
 
   // Referencias para los menús
   const notificationRef = useRef(null)
@@ -134,32 +137,187 @@ export default function Navbar() {
           <div className="flex items-center">
             {/* Menú de notificaciones - Desktop y Mobile */}
             <div className="relative" ref={notificationRef}>
-              <motion.button
-                whileTap={{ scale: 0.95 }}
+              <button
                 onClick={() => {
                   setIsNotificationMenuOpen(!isNotificationMenuOpen)
                   setIsCartOpen(false)
                   setIsUserMenuOpen(false)
                 }}
-                className="flex items-center text-gray-600 hover:text-orange-500 focus:outline-none p-2 rounded-full hover:bg-orange-50"
+                className="relative p-2 text-gray-600 hover:text-orange-500"
               >
-                <Bell className="w-6 h-6" />
-              </motion.button>
-
-              {/* Menú de notificaciones */}
+                <Bell className="w-5 h-5 sm:w-6 sm:h-6" />
+                {notifications.filter(n => !n.leida).length > 0 && (
+                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                    {notifications.filter(n => !n.leida).length}
+                  </span>
+                )}
+              </button>
+              
+              {/* Panel de notificaciones con AnimatePresence */}
               <AnimatePresence>
                 {isNotificationMenuOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 10 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    exit={{ opacity: 0, y: 10 }}
-                    transition={{ duration: 0.2 }}
-                    className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1"
-                  >
-                    <div className="py-2">
-                      <p className="px-4 py-2 text-sm text-gray-700">No tienes nuevas notificaciones</p>
-                    </div>
-                  </motion.div>
+                  <>
+                    {/* Overlay animado */}
+                    <motion.div 
+                      initial={{ opacity: 0 }}
+                      animate={{ opacity: 1 }}
+                      exit={{ opacity: 0 }}
+                      className="fixed inset-0 bg-black bg-opacity-50 z-40 md:hidden" 
+                      onClick={() => setIsNotificationMenuOpen(false)}
+                    />
+                    
+                    {/* Panel de notificaciones animado */}
+                    <motion.div 
+                      initial={{ 
+                        opacity: 0,
+                        y: '100%',
+                        scale: 0.95,
+                        ...(window.innerWidth >= 768 ? {
+                          x: 20,
+                          y: 0
+                        } : {})
+                      }}
+                      animate={{ 
+                        opacity: 1,
+                        y: 0,
+                        x: 0,
+                        scale: 1
+                      }}
+                      exit={{ 
+                        opacity: 0,
+                        y: '100%',
+                        scale: 0.95,
+                        ...(window.innerWidth >= 768 ? {
+                          x: 20,
+                          y: 0
+                        } : {})
+                      }}
+                      transition={{
+                        duration: 0.2,
+                        ease: [0.4, 0, 0.2, 1]
+                      }}
+                      className={`
+                        fixed md:absolute 
+                        inset-x-0 bottom-0 md:inset-auto 
+                        md:right-0 md:top-full md:mt-2
+                        z-50 md:z-10 
+                        w-full md:w-[28rem] 
+                        bg-white 
+                        rounded-t-2xl md:rounded-lg 
+                        shadow-lg
+                      `}
+                    >
+                      <div className="flex flex-col h-[80vh] md:h-auto md:max-h-[calc(100vh-10rem)]">
+                        {/* Indicador de arrastre para móviles */}
+                        <motion.div 
+                          className="h-1.5 w-12 bg-gray-300 rounded-full mx-auto my-2 md:hidden"
+                          initial={{ width: '2rem' }}
+                          animate={{ width: '3rem' }}
+                          transition={{ duration: 0.2 }}
+                        />
+
+                        {/* Header */}
+                        <div className="px-4 py-3 bg-gray-50 rounded-t-2xl md:rounded-t-lg">
+                          <div className="flex items-center justify-between">
+                            <motion.h3 
+                              initial={{ x: -20, opacity: 0 }}
+                              animate={{ x: 0, opacity: 1 }}
+                              transition={{ delay: 0.1 }}
+                              className="text-sm font-medium text-gray-900"
+                            >
+                              Notificaciones
+                            </motion.h3>
+                            <div className="flex items-center gap-3">
+                              <motion.span 
+                                initial={{ opacity: 0 }}
+                                animate={{ opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                className="text-xs text-gray-500"
+                              >
+                                {notifications.filter(n => !n.leida).length} sin leer
+                              </motion.span>
+                              <motion.button 
+                                initial={{ scale: 0.5, opacity: 0 }}
+                                animate={{ scale: 1, opacity: 1 }}
+                                transition={{ delay: 0.2 }}
+                                onClick={() => setIsNotificationMenuOpen(false)}
+                                className="md:hidden -mr-1 p-2 text-gray-400 hover:text-gray-500"
+                              >
+                                <span className="sr-only">Cerrar</span>
+                                <svg className="h-5 w-5" viewBox="0 0 20 20" fill="currentColor">
+                                  <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                                </svg>
+                              </motion.button>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Lista de notificaciones */}
+                        <motion.div 
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          transition={{ delay: 0.1 }}
+                          className="flex-1 overflow-y-auto overscroll-contain"
+                        >
+                          {notificationsLoading ? (
+                            <div className="flex justify-center items-center h-32">
+                              <motion.div 
+                                animate={{ rotate: 360 }}
+                                transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                                className="h-6 w-6 border-2 border-orange-500 border-t-transparent rounded-full"
+                              />
+                            </div>
+                          ) : notifications.length === 0 ? (
+                            <motion.div 
+                              initial={{ scale: 0.8, opacity: 0 }}
+                              animate={{ scale: 1, opacity: 1 }}
+                              className="px-4 py-8 text-center"
+                            >
+                              <Package className="mx-auto h-8 w-8 text-gray-400" />
+                              <p className="mt-2 text-sm text-gray-500">No hay notificaciones</p>
+                            </motion.div>
+                          ) : (
+                            <div className="divide-y divide-gray-100">
+                              {notifications.map((notification, index) => (
+                                <motion.div
+                                  key={notification.id}
+                                  initial={{ opacity: 0, y: 20 }}
+                                  animate={{ opacity: 1, y: 0 }}
+                                  transition={{ delay: index * 0.05 }}
+                                >
+                                  <NotificationItem notification={notification} />
+                                </motion.div>
+                              ))}
+                            </div>
+                          )}
+                        </motion.div>
+
+                        {/* Footer */}
+                        {notifications.length > 0 && (
+                          <motion.div 
+                            initial={{ y: 20, opacity: 0 }}
+                            animate={{ y: 0, opacity: 1 }}
+                            transition={{ delay: 0.2 }}
+                            className="px-4 py-3 bg-gray-50 text-right border-t border-gray-100"
+                          >
+                            <button
+                              onClick={() => {
+                                Promise.all(
+                                  notifications
+                                    .filter(n => !n.leida)
+                                    .map(n => markAsRead(n.id))
+                                )
+                                setIsNotificationMenuOpen(false)
+                              }}
+                              className="text-xs text-orange-600 hover:text-orange-700"
+                            >
+                              Marcar todas como leídas
+                            </button>
+                          </motion.div>
+                        )}
+                      </div>
+                    </motion.div>
+                  </>
                 )}
               </AnimatePresence>
             </div>
@@ -216,7 +374,7 @@ export default function Navbar() {
 
                         {/* Contenido del carrito - Mobile */}
                         <div className="flex-1 overflow-y-auto p-4">
-                          {loading ? (
+                          {cartLoading ? (
                             <div className="flex justify-center items-center h-32">
                               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
                             </div>
@@ -249,7 +407,7 @@ export default function Navbar() {
                         
                         {/* Lista de items */}
                         <div className="max-h-96 overflow-y-auto mb-4">
-                          {loading ? (
+                          {cartLoading ? (
                             <div className="flex justify-center items-center h-32">
                               <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
                             </div>

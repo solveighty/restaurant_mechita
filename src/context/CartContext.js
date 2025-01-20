@@ -11,6 +11,7 @@ export function CartProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO')
+  const [cartUpdateTrigger, setCartUpdateTrigger] = useState(0)
 
   // Obtener userId del token
   useEffect(() => {
@@ -34,14 +35,10 @@ export function CartProvider({ children }) {
       const token = localStorage.getItem('token')
       const response = await axios.get(`http://localhost:8080/carrito/${userId}`, {
         headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+          'Authorization': `Bearer ${token}`
         }
       })
       
-      console.log('Respuesta del carrito:', response.data)
-      
-      // Asumiendo que la respuesta tiene la estructura correcta
       if (response.data && response.data.items) {
         setCartItems(response.data.items)
       } else {
@@ -55,38 +52,95 @@ export function CartProvider({ children }) {
     }
   }
 
-  // Recargar items cuando cambie el userId
-  useEffect(() => {
-    if (userId) {
-      fetchCartItems()
-    }
-  }, [userId])
+  // Agregar item al carrito
+  const addToCart = async (menuId, cantidad = 1) => {
+    if (!userId) return
 
-  // Función para eliminar item del carrito
+    try {
+      setLoading(true)
+      const token = localStorage.getItem('token')
+      console.log('Token de autenticación:', token)
+      const response = await axios.post(
+        `http://localhost:8080/carrito/agregar/${userId}/${menuId}`,
+        { cantidad },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+      
+      if (response.status === 200) {
+        setCartUpdateTrigger(prev => prev + 1)
+      }
+    } catch (error) {
+      console.error('Error al agregar item al carrito:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Eliminar item del carrito
   const removeItem = async (itemId) => {
     if (!userId) return
 
     try {
+      setLoading(true)
       const token = localStorage.getItem('token')
-      await axios.delete(`http://localhost:8080/carrito/eliminar/${userId}/${itemId}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`,
-          'Content-Type': 'application/json'
+      const response = await axios.delete(
+        `http://localhost:8080/carrito/eliminar/${userId}/${itemId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         }
-      })
+      )
       
-      // Recargar items después de eliminar
-      await fetchCartItems()
+      if (response.status === 200) {
+        setCartUpdateTrigger(prev => prev + 1)
+      }
     } catch (error) {
       console.error('Error al eliminar item:', error)
+    } finally {
+      setLoading(false)
     }
   }
 
-  // Función para procesar el pago
+  // Actualizar cantidad de un item
+  const updateItemQuantity = async (itemId, cantidad) => {
+    if (!userId) return
+
+    try {
+      setLoading(true)
+      const token = localStorage.getItem('token')
+      const response = await axios.put(
+        `http://localhost:8080/carrito/actualizar/${userId}/${itemId}`,
+        { cantidad },
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      )
+      
+      if (response.status === 200) {
+        setCartUpdateTrigger(prev => prev + 1)
+      }
+    } catch (error) {
+      console.error('Error al actualizar cantidad:', error)
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // Procesar el pago
   const processPayment = async () => {
     if (!userId) return false
 
     try {
+      setLoading(true)
       const token = localStorage.getItem('token')
       const response = await axios.put(
         `http://localhost:8080/carrito/pagar/${userId}`,
@@ -100,13 +154,15 @@ export function CartProvider({ children }) {
       )
 
       if (response.status === 200) {
-        setCartItems([]) // Limpiar carrito después del pago exitoso
+        setCartItems([])
         return true
       }
       return false
     } catch (error) {
       console.error('Error al procesar el pago:', error)
       return false
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -115,12 +171,21 @@ export function CartProvider({ children }) {
     return cartItems.reduce((total, item) => total + (item.menu.precio * item.cantidad), 0)
   }
 
+  // Efecto para recargar items cuando cambie el userId o el trigger
+  useEffect(() => {
+    if (userId) {
+      fetchCartItems()
+    }
+  }, [userId, cartUpdateTrigger])
+
   const value = {
     cartItems,
     loading,
     paymentMethod,
     setPaymentMethod,
+    addToCart,
     removeItem,
+    updateItemQuantity,
     processPayment,
     calculateTotal,
     fetchCartItems
