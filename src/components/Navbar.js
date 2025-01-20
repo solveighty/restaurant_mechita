@@ -2,14 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
-import { usePathname } from 'next/navigation'
+import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell, Trash2 } from 'lucide-react'
-import { useRouter } from 'next/navigation'
+import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell, Trash2, Package } from 'lucide-react'
 import { ShoppingCart } from 'lucide-react'
-import * as jose from 'jose'
-import axios from 'axios'
-import Image from 'next/image'
 import { useCart } from '@/context/CartContext'
 import CartItem from './Cart/CartItem'
 import CartFooter from './Cart/CartFooter'
@@ -21,12 +17,32 @@ export default function Navbar() {
   const [isNotificationMenuOpen, setIsNotificationMenuOpen] = useState(false)
   const pathname = usePathname()
   const router = useRouter()
-  const { cartItems, loading, fetchCartItems } = useCart()
+  const { cartItems, loading } = useCart()
 
   // Referencias para los menús
   const notificationRef = useRef(null)
   const userMenuRef = useRef(null)
   const cartRef = useRef(null)
+
+  // Función para manejar clicks fuera de los menús
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (notificationRef.current && !notificationRef.current.contains(event.target)) {
+        setIsNotificationMenuOpen(false)
+      }
+      if (userMenuRef.current && !userMenuRef.current.contains(event.target)) {
+        setIsUserMenuOpen(false)
+      }
+      if (cartRef.current && !cartRef.current.contains(event.target)) {
+        setIsCartOpen(false)
+      }
+    }
+
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside)
+    }
+  }, [])
 
   // Función de logout (mover antes de userNavigation)
   const handleLogout = () => {
@@ -44,6 +60,7 @@ export default function Navbar() {
 
   const userNavigation = [
     { name: 'Perfil', href: '/account/profile', icon: UserCircle },
+    { name: 'Mis Pedidos', href: '/account/orders', icon: Package },
     { name: 'Cerrar Sesión', href: '#', icon: LogOut, onClick: handleLogout },
   ]
 
@@ -76,14 +93,6 @@ export default function Navbar() {
         </Link>
       </motion.div>
     )
-  }
-
-  // Solo recargar cuando se abre el carrito
-  const handleCartClick = () => {
-    if (!isCartOpen) {
-      fetchCartItems() // Solo cargar cuando se abre
-    }
-    setIsCartOpen(!isCartOpen)
   }
 
   return (
@@ -127,7 +136,11 @@ export default function Navbar() {
             <div className="relative" ref={notificationRef}>
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setIsNotificationMenuOpen(!isNotificationMenuOpen)}
+                onClick={() => {
+                  setIsNotificationMenuOpen(!isNotificationMenuOpen)
+                  setIsCartOpen(false)
+                  setIsUserMenuOpen(false)
+                }}
                 className="flex items-center text-gray-600 hover:text-orange-500 focus:outline-none p-2 rounded-full hover:bg-orange-50"
               >
                 <Bell className="w-6 h-6" />
@@ -155,16 +168,18 @@ export default function Navbar() {
             <motion.div className="relative mr-4" ref={cartRef}>
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={handleCartClick}
+                onClick={() => {
+                  setIsCartOpen(!isCartOpen)
+                  setIsNotificationMenuOpen(false)
+                  setIsUserMenuOpen(false)
+                }}
                 className="flex items-center text-gray-600 hover:text-orange-500 focus:outline-none p-2 rounded-full hover:bg-orange-50"
               >
                 <ShoppingCart className="w-5 h-5 sm:w-6 sm:h-6" />
                 {/* Badge para cantidad de items */}
-                {cartItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
-                    {cartItems.length}
-                  </span>
-                )}
+                <span className="absolute -top-1 -right-1 bg-orange-500 text-white text-xs rounded-full h-4 w-4 flex items-center justify-center">
+                  {cartItems.length}
+                </span>
               </motion.button>
 
               <AnimatePresence>
@@ -262,7 +277,11 @@ export default function Navbar() {
             <div className="relative" ref={userMenuRef}>
               <motion.button
                 whileTap={{ scale: 0.95 }}
-                onClick={() => setIsUserMenuOpen(!isUserMenuOpen)}
+                onClick={() => {
+                  setIsUserMenuOpen(!isUserMenuOpen)
+                  setIsNotificationMenuOpen(false)
+                  setIsCartOpen(false)
+                }}
                 className="flex items-center text-gray-600 hover:text-orange-500 focus:outline-none p-2 rounded-full hover:bg-orange-50"
               >
                 <User className="w-6 h-6" />
@@ -277,8 +296,17 @@ export default function Navbar() {
                     transition={{ duration: 0.2 }}
                     className="absolute right-0 mt-2 w-48 rounded-md shadow-lg bg-white ring-1 ring-black ring-opacity-5 py-1"
                   >
-                    <Link href="/account/profile" className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Perfil</Link>
-                    <Link href="#" onClick={handleLogout} className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100">Cerrar Sesión</Link>
+                    {userNavigation.map((item) => (
+                      <Link
+                        key={item.name}
+                        href={item.href}
+                        onClick={item.onClick}
+                        className="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-100"
+                      >
+                        <item.icon className="mr-3 h-5 w-5 text-gray-400" />
+                        {item.name}
+                      </Link>
+                    ))}
                   </motion.div>
                 )}
               </AnimatePresence>

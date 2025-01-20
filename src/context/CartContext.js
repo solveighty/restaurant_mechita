@@ -38,8 +38,15 @@ export function CartProvider({ children }) {
           'Content-Type': 'application/json'
         }
       })
+      
       console.log('Respuesta del carrito:', response.data)
-      setCartItems(response.data.items || [])
+      
+      // Asumiendo que la respuesta tiene la estructura correcta
+      if (response.data && response.data.items) {
+        setCartItems(response.data.items)
+      } else {
+        setCartItems([])
+      }
     } catch (error) {
       console.error('Error al obtener items del carrito:', error)
       setCartItems([])
@@ -53,16 +60,9 @@ export function CartProvider({ children }) {
     if (userId) {
       fetchCartItems()
     }
-  }, [userId]) // Solo depende de userId
+  }, [userId])
 
-  // Agregar una función para recargar el carrito manualmente
-  const refreshCart = () => {
-    if (userId) {
-      fetchCartItems()
-    }
-  }
-
-  // Eliminar item del carrito
+  // Función para eliminar item del carrito
   const removeItem = async (itemId) => {
     if (!userId) return
 
@@ -74,20 +74,21 @@ export function CartProvider({ children }) {
           'Content-Type': 'application/json'
         }
       })
-
-      setCartItems(prevItems => prevItems.filter(item => item.id !== itemId))
+      
+      // Recargar items después de eliminar
+      await fetchCartItems()
     } catch (error) {
       console.error('Error al eliminar item:', error)
     }
   }
 
-  // Procesar pago
+  // Función para procesar el pago
   const processPayment = async () => {
-    if (!userId || cartItems.length === 0) return
+    if (!userId) return false
 
     try {
       const token = localStorage.getItem('token')
-      await axios.put(
+      const response = await axios.put(
         `http://localhost:8080/carrito/pagar/${userId}`,
         { metodoPago: paymentMethod },
         {
@@ -98,15 +99,18 @@ export function CartProvider({ children }) {
         }
       )
 
-      setCartItems([])
-      return true
+      if (response.status === 200) {
+        setCartItems([]) // Limpiar carrito después del pago exitoso
+        return true
+      }
+      return false
     } catch (error) {
       console.error('Error al procesar el pago:', error)
       return false
     }
   }
 
-  // Calcular total
+  // Calcular total del carrito
   const calculateTotal = () => {
     return cartItems.reduce((total, item) => total + (item.menu.precio * item.cantidad), 0)
   }
@@ -119,8 +123,7 @@ export function CartProvider({ children }) {
     removeItem,
     processPayment,
     calculateTotal,
-    fetchCartItems, // Solo exportar si es necesario para actualizaciones manuales
-    refreshCart
+    fetchCartItems
   }
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>
