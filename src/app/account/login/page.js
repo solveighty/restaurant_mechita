@@ -7,6 +7,7 @@ import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
 import axios from 'axios';
 import { useRouter } from 'next/navigation';
 import { toast } from 'react-toastify';
+import url_Backend from '@/context/config'
 
 
 const containerVariants = {
@@ -59,7 +60,7 @@ export default function LoginPage() {
     if (!validateForm()) return;
 
     try {
-      const response = await axios.post('http://localhost:8080/usuarios/login', null, {
+      const response = await axios.post(`http://${url_Backend}:8080/usuarios/login`, null, {
         params: {
           identificador: formData.email,
           contrasena: formData.password

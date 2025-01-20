@@ -7,6 +7,7 @@ import axios from 'axios'
 import { motion } from 'framer-motion'
 import { toast } from 'react-toastify'
 import { User, Mail, Lock, Eye, EyeOff, Phone, Star, Gift, Clock, MapPin, User2 } from 'lucide-react'
+import url_Backend from '@/context/config'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -67,7 +68,7 @@ export default function RegisterPage() {
       params.append('email', formData.email)
 
       const response = await axios.post(
-        'http://localhost:8080/verification/send',
+        `http://${url_Backend}:8080/verification/send`,
         params.toString(),
         {
           headers: {
@@ -93,7 +94,7 @@ export default function RegisterPage() {
       params.append('code', verificationCode)
 
       const response = await axios.post(
-        'http://localhost:8080/verification/verify',
+        `http://${url_Backend}:8080/verification/verify`,
         params.toString(),
         {
           headers: {
@@ -145,7 +146,7 @@ export default function RegisterPage() {
       }
 
       const response = await axios.post(
-        'http://localhost:8080/usuarios/crearusuario',
+        `http://${url_Backend}:8080/usuarios/crearusuario`,
         userData,
         {
           headers: {

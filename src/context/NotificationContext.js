@@ -3,6 +3,8 @@
 import { createContext, useContext, useState, useEffect } from 'react'
 import axios from 'axios'
 import { decodeJwt } from 'jose'
+import url_Backend from './config'
+import { toast } from 'react-toastify';
 
 const NotificationContext = createContext()
 
@@ -29,7 +31,7 @@ export function NotificationProvider({ children }) {
     try {
       setLoading(true)
       const token = localStorage.getItem('token')
-      const response = await axios.get(`http://localhost:8080/notificaciones/usuario/${userId}`, {
+      const response = await axios.get(`http://${url_Backend}:8080/notificaciones/usuario/${userId}`, {
         headers: {
           'Authorization': `Bearer ${token}`
         }
@@ -39,8 +41,13 @@ export function NotificationProvider({ children }) {
       const filteredNotifications = response.data
         .filter(notification => notification.tipoNotificacion === 'USUARIO')
         .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+      
+      if (filteredNotifications.length > 0) {
+        toast.success('Tienes una nueva notificación', { autoClose: 2000, closeOnClick: true, hideProgressBar: true, position: "bottom-right" });
+      }
 
       setNotifications(filteredNotifications)
+      
     } catch (error) {
       console.error('Error al obtener notificaciones:', error)
       setNotifications([])
@@ -53,7 +60,7 @@ export function NotificationProvider({ children }) {
     try {
       const token = localStorage.getItem('token')
       await axios.put(
-        `http://localhost:8080/notificaciones/marcar-leida/${notificationId}`,
+        `http://${url_Backend}:8080/notificaciones/marcar-leida/${notificationId}`,
         {},
         {
           headers: {
@@ -69,6 +76,7 @@ export function NotificationProvider({ children }) {
             : notif
         )
       )
+      toast.success('Notificación marcada como leída', { autoClose: 2000, closeOnClick: true, hideProgressBar: true, position: "bottom-right" });
     } catch (error) {
       console.error('Error al marcar notificación como leída:', error)
     }

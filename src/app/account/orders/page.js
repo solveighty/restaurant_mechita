@@ -13,6 +13,7 @@ import {
   FilterX
 } from 'lucide-react'
 import { decodeJwt } from 'jose'
+import url_Backend from '@/context/config'
 
 const estadosIcons = {
   'EN_PROCESO': <Package className="w-5 h-5" />,
@@ -47,7 +48,7 @@ export default function OrdersPage() {
       
       try {
         const token = localStorage.getItem('token')
-        const response = await fetch(`http://localhost:8080/historial/${userId}`, {
+        const response = await fetch(`http://${url_Backend}:8080/historial/${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'

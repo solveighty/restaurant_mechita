@@ -7,6 +7,7 @@ import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as jose from 'jose'
 import { toast } from 'react-toastify';
+import url_Backend from '@/context/config'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -78,7 +79,7 @@ export default function MenuDisplay() {
           throw new Error('No se encontró el token de autenticación')
         }
 
-        const response = await axios.get('http://localhost:8080/menu', {
+        const response = await axios.get(`http://${url_Backend}:8080/menu`, {
           headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -149,7 +150,7 @@ export default function MenuDisplay() {
     try {
       const token = localStorage.getItem('token')
       const response = await axios.post(
-        'http://localhost:8080/carrito/agregar',
+        `http://${url_Backend}:8080/carrito/agregar`,
         {
           usuarioId: userId,
           menuId: selectedItem.id,

@@ -5,6 +5,7 @@ import axios from 'axios'
 import { decodeJwt } from 'jose'
 import { motion } from 'framer-motion'
 import { User, Mail, Phone, MapPin, Edit2, Calendar, Shield } from 'lucide-react'
+import url_Backend from '@/context/config'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -40,7 +41,7 @@ export default function ProfilePage() {
         if (!token) throw new Error('No token found')
 
         const { id: userId } = decodeJwt(token) 
-        const response = await axios.get(`http://localhost:8080/usuarios/obtenerusuario/${userId}`, {
+        const response = await axios.get(`http://${url_Backend}:8080/usuarios/obtenerusuario/${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
