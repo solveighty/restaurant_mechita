@@ -7,7 +7,9 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 @Entity
 @Getter
@@ -20,7 +22,7 @@ public class CarritoEntity {
 
     @OneToOne
     @JoinColumn(name = "usuario_id", referencedColumnName = "id")
-    @JsonBackReference  // Evita la serialización recursiva del usuario
+    @JsonBackReference
     private UsuarioEntity usuario;
 
     @OneToMany(mappedBy = "carrito", cascade = CascadeType.ALL, orphanRemoval = true)

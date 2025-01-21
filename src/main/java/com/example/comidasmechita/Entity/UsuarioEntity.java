@@ -6,6 +6,8 @@ import jakarta.validation.constraints.Email;
 import lombok.Getter;
 import lombok.Setter;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Getter
 @Setter
@@ -21,12 +23,13 @@ public class UsuarioEntity {
     @Email(message = "El correo electrónico debe tener un formato válido")
     private String email;
     private String direccion;
+    private LocalDateTime miembroDesde = LocalDateTime.now();
+    private boolean cuentaVerificada;
 
 
-    @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)  // Relación bidireccional con CarritoEntity
-    @JsonManagedReference  // Indica que se debe serializar el carrito del usuario
+    @OneToOne(mappedBy = "usuario", cascade = CascadeType.ALL, orphanRemoval = true)
+    @JsonManagedReference
     private CarritoEntity carrito;
-
 
     @Enumerated(EnumType.STRING)
     private Rol rol;
