@@ -14,6 +14,7 @@ import {
 } from 'lucide-react'
 import { decodeJwt } from 'jose'
 import url_Backend from '@/context/config'
+import axios from 'axios';
 
 const estadosIcons = {
   'EN_PROCESO': <Package className="w-5 h-5" />,
@@ -48,14 +49,14 @@ export default function OrdersPage() {
       
       try {
         const token = localStorage.getItem('token')
-        const response = await fetch(`http://${url_Backend}:8080/historial/${userId}`, {
+        const response = await axios.get(`http://${url_Backend}:8080/historial/${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`,
-            'Content-Type': 'application/json'
-          }
-        })
+            'Content-Type': 'application/json',
+          },
+        });
 
-        const data = await response.json()
+        const data = response.data
         console.log('Datos del servidor:', data) // Para ver la estructura exacta
         setPedidos(data)
       } catch (error) {
