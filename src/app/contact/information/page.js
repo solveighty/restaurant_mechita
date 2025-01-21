@@ -28,17 +28,17 @@ const itemVariants = {
 
 export default function ContactPage() {
   const restaurantInfo = {
-    address: "Calle Principal 123, Ciudad",
-    phone: "+34 123 456 789",
-    email: "info@deliciasexpress.com",
+    address: "404 Dooley Street, Oasis, Mississippi, 8325",
+    phone: "+593 98 102 3471",
+    email: "contact@comidasmechita.esm.ec",
     schedule: {
-      weekdays: "Lunes a Viernes: 11:00 - 23:00",
-      weekends: "Sábados y Domingos: 12:00 - 00:00"
+      weekdays: "Lunes a Viernes: 07:00 - 19:00",
+      weekends: "Sábados: 08:00 - 16:00"
     },
     socialMedia: {
-      instagram: "https://instagram.com/turestaurante",
-      telegram: "https://t.me/turestaurante",
-      whatsapp: "https://wa.me/34123456789"
+      instagram: "https://www.instagram.com/romanpaulov/",
+      telegram: "https://t.me/manulization",
+      whatsapp: "https://manulization.com/"
     }
   }
 

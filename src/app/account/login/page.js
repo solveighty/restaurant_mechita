@@ -106,10 +106,10 @@ export default function LoginPage() {
               transition={{ delay: 0.3 }}
             >
               <h1 className="text-4xl font-bold mb-4">
-                Delicias Express
+                Comidas Mechita
               </h1>
               <p className="text-xl text-orange-100">
-                Tu restaurante favorito ahora más cerca que nunca
+                Tu comida favorita ahora más cerca que nunca
               </p>
             </motion.div>
 

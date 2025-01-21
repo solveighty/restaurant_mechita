@@ -40,14 +40,14 @@ export default function ProfilePage() {
         const token = localStorage.getItem('token')
         if (!token) throw new Error('No token found')
 
-        const { id: userId } = decodeJwt(token) 
+        const { id: userId } = decodeJwt(token)
         const response = await axios.get(`http://${url_Backend}:8080/usuarios/obtenerusuario/${userId}`, {
           headers: {
             'Authorization': `Bearer ${token}`
           }
         })
 
-        setUserProfile(response.data) 
+        setUserProfile(response.data)
         setLoading(false)
       } catch (err) {
         setError(err.message)
@@ -99,7 +99,7 @@ export default function ProfilePage() {
         className="max-w-3xl mx-auto space-y-6 sm:space-y-8"
       >
         {/* Encabezado del perfil */}
-        <motion.div 
+        <motion.div
           initial={{ y: -50, opacity: 0 }}
           animate={{ y: 0, opacity: 1 }}
           transition={{ duration: 0.6 }}
@@ -111,7 +111,7 @@ export default function ProfilePage() {
             transition={{ duration: 0.8 }}
             className="absolute top-0 right-0 w-64 h-64 bg-white rounded-full -translate-y-1/2 translate-x-1/2"
           />
-          
+
           <div className="flex flex-col sm:flex-row sm:items-center space-y-4 sm:space-y-0 sm:space-x-6">
             <motion.div
               initial={{ scale: 0 }}
@@ -121,9 +121,9 @@ export default function ProfilePage() {
             >
               <User className="w-10 h-10 sm:w-12 sm:h-12 text-orange-500" />
             </motion.div>
-            
+
             <div className="text-center sm:text-left">
-              <motion.h1 
+              <motion.h1
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.3 }}
@@ -131,7 +131,7 @@ export default function ProfilePage() {
               >
                 {userProfile.nombre}
               </motion.h1>
-              <motion.p 
+              <motion.p
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: 0.4 }}
@@ -141,8 +141,8 @@ export default function ProfilePage() {
               </motion.p>
             </div>
           </div>
-          
-          <motion.div 
+
+          <motion.div
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.5 }}
@@ -150,7 +150,13 @@ export default function ProfilePage() {
           >
             <div className="flex items-center">
               <Calendar size={16} className="mr-2" />
-              <span>Miembro desde {userProfile.miembroDesde}</span>
+              <span>
+                Miembro desde{" "}
+                {userProfile.miembroDesde
+                  ? new Date(userProfile.miembroDesde).toLocaleString()
+                  : "Fecha no disponible"}
+              </span>
+
             </div>
             <div className="flex items-center">
               <Shield size={16} className="mr-2" />
@@ -160,7 +166,7 @@ export default function ProfilePage() {
         </motion.div>
 
         {/* Información del perfil */}
-        <motion.div 
+        <motion.div
           variants={containerVariants}
           className="space-y-4"
         >
