@@ -4,7 +4,8 @@ import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { decodeJwt } from 'jose'
 import { motion } from 'framer-motion'
-import { User, Mail, Phone, MapPin, Edit2, Calendar, Shield } from 'lucide-react'
+import { User, Mail, Phone, MapPin, Edit2, Calendar, Shield, Lock } from 'lucide-react'
+import { toast } from 'react-toastify'
 import url_Backend from '@/context/config'
 
 const containerVariants = {
@@ -33,6 +34,27 @@ export default function ProfilePage() {
   const [userProfile, setUserProfile] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  const [editingField, setEditingField] = useState(null)
+  const [isChangingPassword, setIsChangingPassword] = useState(false)
+  const [formData, setFormData] = useState({
+    nombre: '',
+    email: '',
+    telefono: '',
+    direccion: '',
+  })
+  const [passwordData, setPasswordData] = useState({
+    contrasenaActual: '',
+    nuevaContrasena: '',
+    confirmarContrasena: ''
+  })
+
+  const getAuthHeaders = () => {
+    const token = localStorage.getItem('token')
+    return {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${token}`
+    }
+  }
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -41,16 +63,23 @@ export default function ProfilePage() {
         if (!token) throw new Error('No token found')
 
         const { id: userId } = decodeJwt(token)
-        const response = await axios.get(`http://${url_Backend}:8080/usuarios/obtenerusuario/${userId}`, {
-          headers: {
-            'Authorization': `Bearer ${token}`
-          }
-        })
+        const response = await axios.get(
+          `http://${url_Backend}:8080/usuarios/obtenerusuario/${userId}`,
+          { headers: getAuthHeaders() }
+        )
 
         setUserProfile(response.data)
-        setLoading(false)
+        setFormData(prev => ({
+          ...prev,
+          nombre: response.data.nombre || '',
+          email: response.data.email || '',
+          telefono: response.data.telefono || '',
+          direccion: response.data.direccion || '',
+        }))
       } catch (err) {
         setError(err.message)
+        toast.error('Error al cargar el perfil')
+      } finally {
         setLoading(false)
       }
     }
@@ -58,37 +87,224 @@ export default function ProfilePage() {
     fetchUserProfile()
   }, [])
 
-  const ProfileCard = ({ icon: Icon, title, value }) => (
+  const handleInputChange = (field, value) => {
+    setFormData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handlePasswordChange = (field, value) => {
+    setPasswordData(prev => ({
+      ...prev,
+      [field]: value
+    }))
+  }
+
+  const handleUpdatePassword = async () => {
+    try {
+      if (!passwordData.contrasenaActual) {
+        throw new Error('Debe ingresar su contraseña actual')
+      }
+      if (passwordData.nuevaContrasena !== passwordData.confirmarContrasena) {
+        throw new Error('Las contraseñas nuevas no coinciden')
+      }
+      if (passwordData.nuevaContrasena.length < 6) {
+        throw new Error('La contraseña debe tener al menos 6 caracteres')
+      }
+
+      const response = await axios.put(
+        `http://${url_Backend}:8080/usuarios/editarusuario/${userProfile.id}`,
+        {
+          ...userProfile,
+          contrasenaActual: passwordData.contrasenaActual,
+          contrasena: passwordData.nuevaContrasena
+        },
+        { headers: getAuthHeaders() }
+      )
+
+      setIsChangingPassword(false)
+      setPasswordData({
+        contrasenaActual: '',
+        nuevaContrasena: '',
+        confirmarContrasena: ''
+      })
+      toast.success('Contraseña actualizada correctamente')
+    } catch (error) {
+      toast.error(error.message || 'Error al actualizar la contraseña')
+    }
+  }
+
+  const handleUpdate = async (field) => {
+    try {
+      const response = await axios.put(
+        `http://${url_Backend}:8080/usuarios/editarusuario/${userProfile.id}`,
+        {
+          ...userProfile,
+          [field]: formData[field]
+        },
+        { headers: getAuthHeaders() }
+      )
+
+      setUserProfile(prev => ({
+        ...prev,
+        [field]: formData[field]
+      }))
+      setEditingField(null)
+      toast.success('Datos actualizados correctamente')
+    } catch (error) {
+      toast.error(error.message || 'Error al actualizar los datos')
+    }
+  }
+
+  const EditableField = ({ icon: Icon, title, field, value, type = 'text' }) => (
     <motion.div
       variants={itemVariants}
       whileHover={{ scale: 1.02 }}
       whileTap={{ scale: 0.98 }}
-      className="bg-white p-4 sm:p-6 rounded-lg shadow-md flex flex-col sm:flex-row sm:items-center space-y-3 sm:space-y-0 sm:space-x-4"
+      className="bg-white p-4 sm:p-6 rounded-lg shadow-md"
     >
-      <div className="bg-orange-100 p-3 rounded-full w-fit">
-        <Icon className="text-orange-500 w-5 h-5 sm:w-6 sm:h-6" />
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <div className="bg-orange-100 p-3 rounded-full">
+            <Icon className="text-orange-500 w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div className="flex-1">
+            <p className="text-sm text-gray-500">{title}</p>
+            {editingField === field ? (
+              <div className="mt-2">
+                <input
+                  type={type}
+                  value={formData[field]}
+                  onChange={(e) => handleInputChange(field, e.target.value)}
+                  className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                />
+                <div className="flex justify-end space-x-2 mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setEditingField(null)}
+                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleUpdate(field)}
+                    className="px-3 py-1 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600"
+                  >
+                    Guardar
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <p className="text-gray-800 font-medium text-sm sm:text-base">
+                {value || 'No especificado'}
+              </p>
+            )}
+          </div>
+        </div>
+        {editingField !== field && (
+          <motion.button
+            type="button"
+            whileHover={{ scale: 1.1 }}
+            whileTap={{ scale: 0.9 }}
+            onClick={() => {
+              setEditingField(field)
+              setFormData(prev => ({
+                ...prev,
+                [field]: userProfile[field] || ''
+              }))
+            }}
+            className="text-gray-400 hover:text-orange-500 transition-colors duration-200"
+          >
+            <Edit2 size={16} className="sm:w-5 sm:h-5" />
+          </motion.button>
+        )}
       </div>
-      <div className="flex-1">
-        <p className="text-sm text-gray-500">{title}</p>
-        <p className="text-gray-800 font-medium text-sm sm:text-base">{value}</p>
-      </div>
-      <motion.button
-        whileHover={{ scale: 1.1, rotate: 180 }}
-        whileTap={{ scale: 0.9 }}
-        className="text-gray-400 hover:text-orange-500 transition-colors duration-200"
-      >
-        <Edit2 size={16} className="sm:w-5 sm:h-5" />
-      </motion.button>
     </motion.div>
   )
 
-  if (loading) {
-    return <div className="text-center mt-10">Cargando perfil...</div>
-  }
+  const PasswordSection = () => (
+    <motion.div
+      variants={itemVariants}
+      whileHover={{ scale: 1.02 }}
+      whileTap={{ scale: 0.98 }}
+      className="bg-white p-4 sm:p-6 rounded-lg shadow-md"
+    >
+      <div className="flex items-center justify-between mb-4">
+        <div className="flex items-center space-x-4">
+          <div className="bg-orange-100 p-3 rounded-full">
+            <Lock className="text-orange-500 w-5 h-5 sm:w-6 sm:h-6" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500">Cambiar Contraseña</p>
+            <p className="text-gray-800 font-medium text-sm sm:text-base">
+              ••••••••
+            </p>
+          </div>
+        </div>
+        <button
+          type="button"
+          onClick={() => setIsChangingPassword(!isChangingPassword)}
+          className="text-gray-400 hover:text-orange-500 transition-colors duration-200"
+        >
+          <Edit2 size={16} className="sm:w-5 sm:h-5" />
+        </button>
+      </div>
 
-  if (error) {
-    return <div className="text-center mt-10 text-red-500">Error: {error}</div>
-  }
+      {isChangingPassword && (
+        <div className="space-y-3 mt-4">
+          <input
+            type="password"
+            value={passwordData.contrasenaActual}
+            onChange={(e) => handlePasswordChange('contrasenaActual', e.target.value)}
+            placeholder="Contraseña actual"
+            className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+          <input
+            type="password"
+            value={passwordData.nuevaContrasena}
+            onChange={(e) => handlePasswordChange('nuevaContrasena', e.target.value)}
+            placeholder="Nueva contraseña"
+            className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+          <input
+            type="password"
+            value={passwordData.confirmarContrasena}
+            onChange={(e) => handlePasswordChange('confirmarContrasena', e.target.value)}
+            placeholder="Confirmar nueva contraseña"
+            className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+          />
+          <div className="flex justify-end space-x-2">
+            <button
+              type="button"
+              onClick={() => {
+                setIsChangingPassword(false)
+                setPasswordData({
+                  contrasenaActual: '',
+                  nuevaContrasena: '',
+                  confirmarContrasena: ''
+                })
+              }}
+              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              onClick={handleUpdatePassword}
+              className="px-3 py-1 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600"
+            >
+              Actualizar Contraseña
+            </button>
+          </div>
+        </div>
+      )}
+    </motion.div>
+  )
+
+  if (loading) return <div className="text-center mt-10">Cargando perfil...</div>
+  if (error) return <div className="text-center mt-10 text-red-500">Error: {error}</div>
 
   return (
     <div className="min-h-screen bg-gray-50 py-8 sm:py-12 px-4 sm:px-6 lg:px-8">
@@ -166,30 +382,34 @@ export default function ProfilePage() {
         </motion.div>
 
         {/* Información del perfil */}
-        <motion.div
-          variants={containerVariants}
-          className="space-y-4"
-        >
-          <ProfileCard
+        <motion.div variants={containerVariants} className="space-y-4">
+          <EditableField
             icon={User}
             title="Nombre Completo"
+            field="nombre"
             value={userProfile.nombre}
           />
-          <ProfileCard
+          <EditableField
             icon={Mail}
             title="Correo Electrónico"
+            field="email"
             value={userProfile.email}
+            type="email"
           />
-          <ProfileCard
+          <EditableField
             icon={Phone}
             title="Teléfono"
+            field="telefono"
             value={userProfile.telefono}
+            type="tel"
           />
-          <ProfileCard
+          <EditableField
             icon={MapPin}
             title="Dirección"
+            field="direccion"
             value={userProfile.direccion}
           />
+          <PasswordSection />
         </motion.div>
       </motion.div>
     </div>
