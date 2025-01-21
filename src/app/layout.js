@@ -1,9 +1,12 @@
-import Navbar from '@/components/Navbar'
+import { Inter } from 'next/font/google'
+import MainLayout from '@/components/MainLayout'
 import './globals.css'
 import 'react-toastify/dist/ReactToastify.css';
 import { ToastContainer } from 'react-toastify';
 import { CartProvider } from '@/context/CartContext'
 import { NotificationProvider } from '@/context/NotificationContext'
+
+const inter = Inter({ subsets: ['latin'] })
 
 export const metadata = {
   title: 'Comidas Mechita',
@@ -13,16 +16,8 @@ export const metadata = {
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
-      <body>
-        <NotificationProvider>
-          <CartProvider>
-            <Navbar />
-            <main>
-              {children}
-              <ToastContainer />
-            </main>
-          </CartProvider>
-        </NotificationProvider>
+      <body className={inter.className}>
+        <MainLayout>{children}</MainLayout>
       </body>
     </html>
   )
