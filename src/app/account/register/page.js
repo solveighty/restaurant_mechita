@@ -64,23 +64,33 @@ export default function RegisterPage() {
 
   const sendVerificationCode = async () => {
     try {
-      const params = new URLSearchParams()
-      params.append('email', formData.email)
+      const params = new URLSearchParams();
+  params.append('email', formData.email);
 
-      const response = await axios.post(
-        `http://${url_Backend}:8080/verification/send`,
-        params.toString(),
-        {
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded',
-          },
-        }
-      )
+  // Usando toast.promise para manejar los diferentes estados
+  await toast.promise(
+    axios.post(`http://${url_Backend}:8080/verification/send`, params.toString(), {
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded',
+      },
+    }),
+    {
+      pending: 'Enviando código de verificación...',
+      success: {
+        render() {
+          setVerificationStep(true);
+          return 'Código de verificación enviado correctamente';
+        },
+        autoClose: 2000, // Cierra automáticamente después de 2 segundos
+      },
+      error: 'Hubo un error al enviar el código de verificación',
+    },
+    {
+      hideProgressBar: true,
+      closeOnClick: true,
+    }
+  );
 
-      if (response.status === 200) {
-        toast.success('Código de verificación enviado', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
-        setVerificationStep(true)
-      }
     } catch (error) {
       console.error('Error al enviar código:', error)
       toast.error('Error al enviar el código de verificación', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
@@ -105,6 +115,7 @@ export default function RegisterPage() {
 
       if (response.status === 200) {
         setTimeout(() => {
+          toast.success('Cuenta verificada con correctamente.', { autoClose: 2000, closeOnClick: true, hideProgressBar: true })
           router.push('/account/login'); 
         }, 100);
         return true
