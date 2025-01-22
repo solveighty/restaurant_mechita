@@ -1,10 +1,10 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import axios from 'axios'
 import { decodeJwt } from 'jose'
 import { motion } from 'framer-motion'
-import { User, Mail, Phone, MapPin, Edit2, Calendar, Shield, Lock } from 'lucide-react'
+import { User, Mail, Phone, MapPin, Edit2, Calendar, ShieldCheck, Lock } from 'lucide-react'
 import { toast } from 'react-toastify'
 import url_Backend from '@/context/config'
 
@@ -41,11 +41,6 @@ export default function ProfilePage() {
     email: '',
     telefono: '',
     direccion: '',
-  })
-  const [passwordData, setPasswordData] = useState({
-    contrasenaActual: '',
-    nuevaContrasena: '',
-    confirmarContrasena: ''
   })
 
   const getAuthHeaders = () => {
@@ -94,214 +89,238 @@ export default function ProfilePage() {
     }))
   }
 
-  const handlePasswordChange = (field, value) => {
-    setPasswordData(prev => ({
-      ...prev,
-      [field]: value
-    }))
-  }
-
-  const handleUpdatePassword = async () => {
-    try {
-      if (!passwordData.contrasenaActual) {
-        throw new Error('Debe ingresar su contraseña actual')
-      }
-      if (passwordData.nuevaContrasena !== passwordData.confirmarContrasena) {
-        throw new Error('Las contraseñas nuevas no coinciden')
-      }
-      if (passwordData.nuevaContrasena.length < 6) {
-        throw new Error('La contraseña debe tener al menos 6 caracteres')
-      }
-
-      const response = await axios.put(
-        `http://${url_Backend}:8080/usuarios/editarusuario/${userProfile.id}`,
-        {
-          ...userProfile,
-          contrasenaActual: passwordData.contrasenaActual,
-          contrasena: passwordData.nuevaContrasena
-        },
-        { headers: getAuthHeaders() }
-      )
-
-      setIsChangingPassword(false)
-      setPasswordData({
-        contrasenaActual: '',
-        nuevaContrasena: '',
-        confirmarContrasena: ''
-      })
-      toast.success('Contraseña actualizada correctamente')
-    } catch (error) {
-      toast.error(error.message || 'Error al actualizar la contraseña')
-    }
-  }
-
-  const handleUpdate = async (field) => {
+  const handleUpdate = useCallback(async (field, value) => {
     try {
       const response = await axios.put(
         `http://${url_Backend}:8080/usuarios/editarusuario/${userProfile.id}`,
         {
           ...userProfile,
-          [field]: formData[field]
+          [field]: value
         },
         { headers: getAuthHeaders() }
       )
 
       setUserProfile(prev => ({
         ...prev,
-        [field]: formData[field]
+        [field]: value
       }))
       setEditingField(null)
       toast.success('Datos actualizados correctamente')
     } catch (error) {
       toast.error(error.message || 'Error al actualizar los datos')
     }
-  }
+  }, [userProfile, getAuthHeaders])
 
-  const EditableField = ({ icon: Icon, title, field, value, type = 'text' }) => (
-    <motion.div
-      variants={itemVariants}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className="bg-white p-4 sm:p-6 rounded-lg shadow-md"
-    >
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <div className="bg-orange-100 p-3 rounded-full">
-            <Icon className="text-orange-500 w-5 h-5 sm:w-6 sm:h-6" />
-          </div>
-          <div className="flex-1">
-            <p className="text-sm text-gray-500">{title}</p>
-            {editingField === field ? (
-              <div className="mt-2">
-                <input
-                  type={type}
-                  value={formData[field]}
-                  onChange={(e) => handleInputChange(field, e.target.value)}
-                  className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-                />
-                <div className="flex justify-end space-x-2 mt-2">
-                  <button
-                    type="button"
-                    onClick={() => setEditingField(null)}
-                    className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
-                  >
-                    Cancelar
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => handleUpdate(field)}
-                    className="px-3 py-1 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600"
-                  >
-                    Guardar
-                  </button>
-                </div>
+  const EditableField = useMemo(() => {
+    return ({ icon: Icon, title, field, value, type = 'text' }) => {
+      const [inputValue, setInputValue] = useState(value || '')
+
+      useEffect(() => {
+        if (editingField === field) {
+          setInputValue(value || '')
+        }
+      }, [editingField, field, value])
+
+      return (
+        <motion.div
+          variants={itemVariants}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="bg-white p-4 sm:p-6 rounded-lg shadow-md"
+        >
+          <div className="flex items-center justify-between">
+            <div className="flex items-center space-x-4">
+              <div className="bg-orange-100 p-3 rounded-full">
+                <Icon className="text-orange-500 w-5 h-5 sm:w-6 sm:h-6" />
               </div>
-            ) : (
-              <p className="text-gray-800 font-medium text-sm sm:text-base">
-                {value || 'No especificado'}
-              </p>
+              <div className="flex-1">
+                <p className="text-sm text-gray-500">{title}</p>
+                {editingField === field ? (
+                  <div className="mt-2">
+                    <input
+                      type={type}
+                      value={inputValue}
+                      onChange={(e) => setInputValue(e.target.value)}
+                      className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+                    />
+                    <div className="flex justify-end space-x-2 mt-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setEditingField(null)
+                          setInputValue(value || '')
+                        }}
+                        className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                      >
+                        Cancelar
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleUpdate(field, inputValue)
+                        }}
+                        className="px-3 py-1 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600"
+                      >
+                        Guardar
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <p className="text-gray-800 font-medium text-sm sm:text-base">
+                    {value || 'No especificado'}
+                  </p>
+                )}
+              </div>
+            </div>
+            {editingField !== field && (
+              <motion.button
+                type="button"
+                whileHover={{ scale: 1.1 }}
+                whileTap={{ scale: 0.9 }}
+                onClick={() => {
+                  setEditingField(field)
+                  setInputValue(value || '')
+                }}
+                className="text-gray-400 hover:text-orange-500 transition-colors duration-200"
+              >
+                <Edit2 size={16} className="sm:w-5 sm:h-5" />
+              </motion.button>
             )}
           </div>
-        </div>
-        {editingField !== field && (
-          <motion.button
-            type="button"
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
-            onClick={() => {
-              setEditingField(field)
-              setFormData(prev => ({
-                ...prev,
-                [field]: userProfile[field] || ''
-              }))
-            }}
-            className="text-gray-400 hover:text-orange-500 transition-colors duration-200"
-          >
-            <Edit2 size={16} className="sm:w-5 sm:h-5" />
-          </motion.button>
-        )}
-      </div>
-    </motion.div>
-  )
+        </motion.div>
+      )
+    }
+  }, [editingField, handleUpdate])
 
-  const PasswordSection = () => (
-    <motion.div
-      variants={itemVariants}
-      whileHover={{ scale: 1.02 }}
-      whileTap={{ scale: 0.98 }}
-      className="bg-white p-4 sm:p-6 rounded-lg shadow-md"
-    >
-      <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center space-x-4">
-          <div className="bg-orange-100 p-3 rounded-full">
-            <Lock className="text-orange-500 w-5 h-5 sm:w-6 sm:h-6" />
-          </div>
-          <div>
-            <p className="text-sm text-gray-500">Cambiar Contraseña</p>
-            <p className="text-gray-800 font-medium text-sm sm:text-base">
-              ••••••••
-            </p>
-          </div>
-        </div>
-        <button
-          type="button"
-          onClick={() => setIsChangingPassword(!isChangingPassword)}
-          className="text-gray-400 hover:text-orange-500 transition-colors duration-200"
+  const PasswordSection = useMemo(() => {
+    return () => {
+      const [localPasswordData, setLocalPasswordData] = useState({
+        contrasenaActual: '',
+        nuevaContrasena: '',
+        confirmarContrasena: ''
+      })
+
+      const handleLocalPasswordChange = (field, value) => {
+        setLocalPasswordData(prev => ({
+          ...prev,
+          [field]: value
+        }))
+      }
+
+      const handleUpdatePassword = async () => {
+        try {
+          if (!localPasswordData.contrasenaActual) {
+            throw new Error('Debe ingresar su contraseña actual')
+          }
+          if (localPasswordData.nuevaContrasena !== localPasswordData.confirmarContrasena) {
+            throw new Error('Las contraseñas nuevas no coinciden')
+          }
+          if (localPasswordData.nuevaContrasena.length < 6) {
+            throw new Error('La contraseña debe tener al menos 6 caracteres')
+          }
+
+          const response = await axios.put(
+            `http://${url_Backend}:8080/usuarios/editarusuario/${userProfile.id}`,
+            {
+              ...userProfile,
+              contrasenaActual: localPasswordData.contrasenaActual,
+              contrasena: localPasswordData.nuevaContrasena
+            },
+            { headers: getAuthHeaders() }
+          )
+
+          setIsChangingPassword(false)
+          setLocalPasswordData({
+            contrasenaActual: '',
+            nuevaContrasena: '',
+            confirmarContrasena: ''
+          })
+          toast.success('Contraseña actualizada correctamente')
+        } catch (error) {
+          toast.error(error.message || 'Error al actualizar la contraseña')
+        }
+      }
+
+      return (
+        <motion.div
+          variants={itemVariants}
+          whileHover={{ scale: 1.02 }}
+          whileTap={{ scale: 0.98 }}
+          className="bg-white p-4 sm:p-6 rounded-lg shadow-md"
         >
-          <Edit2 size={16} className="sm:w-5 sm:h-5" />
-        </button>
-      </div>
-
-      {isChangingPassword && (
-        <div className="space-y-3 mt-4">
-          <input
-            type="password"
-            value={passwordData.contrasenaActual}
-            onChange={(e) => handlePasswordChange('contrasenaActual', e.target.value)}
-            placeholder="Contraseña actual"
-            className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-          />
-          <input
-            type="password"
-            value={passwordData.nuevaContrasena}
-            onChange={(e) => handlePasswordChange('nuevaContrasena', e.target.value)}
-            placeholder="Nueva contraseña"
-            className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-          />
-          <input
-            type="password"
-            value={passwordData.confirmarContrasena}
-            onChange={(e) => handlePasswordChange('confirmarContrasena', e.target.value)}
-            placeholder="Confirmar nueva contraseña"
-            className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
-          />
-          <div className="flex justify-end space-x-2">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center space-x-4">
+              <div className="bg-orange-100 p-3 rounded-full">
+                <Lock className="text-orange-500 w-5 h-5 sm:w-6 sm:h-6" />
+              </div>
+              <div>
+                <p className="text-sm text-gray-500">Cambiar Contraseña</p>
+                <p className="text-gray-800 font-medium text-sm sm:text-base">
+                  ••••••••
+                </p>
+              </div>
+            </div>
             <button
               type="button"
-              onClick={() => {
-                setIsChangingPassword(false)
-                setPasswordData({
-                  contrasenaActual: '',
-                  nuevaContrasena: '',
-                  confirmarContrasena: ''
-                })
-              }}
-              className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+              onClick={() => setIsChangingPassword(!isChangingPassword)}
+              className="text-gray-400 hover:text-orange-500 transition-colors duration-200"
             >
-              Cancelar
-            </button>
-            <button
-              type="button"
-              onClick={handleUpdatePassword}
-              className="px-3 py-1 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600"
-            >
-              Actualizar Contraseña
+              <Edit2 size={16} className="sm:w-5 sm:h-5" />
             </button>
           </div>
-        </div>
-      )}
-    </motion.div>
-  )
+
+          {isChangingPassword && (
+            <div className="space-y-3 mt-4">
+              <input
+                type="password"
+                value={localPasswordData.contrasenaActual}
+                onChange={(e) => handleLocalPasswordChange('contrasenaActual', e.target.value)}
+                placeholder="Contraseña actual"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              <input
+                type="password"
+                value={localPasswordData.nuevaContrasena}
+                onChange={(e) => handleLocalPasswordChange('nuevaContrasena', e.target.value)}
+                placeholder="Nueva contraseña"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              <input
+                type="password"
+                value={localPasswordData.confirmarContrasena}
+                onChange={(e) => handleLocalPasswordChange('confirmarContrasena', e.target.value)}
+                placeholder="Confirmar nueva contraseña"
+                className="w-full px-3 py-2 border rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500"
+              />
+              <div className="flex justify-end space-x-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsChangingPassword(false)
+                    setLocalPasswordData({
+                      contrasenaActual: '',
+                      nuevaContrasena: '',
+                      confirmarContrasena: ''
+                    })
+                  }}
+                  className="px-3 py-1 text-sm text-gray-600 hover:text-gray-800"
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="button"
+                  onClick={handleUpdatePassword}
+                  className="px-3 py-1 text-sm bg-orange-500 text-white rounded-md hover:bg-orange-600"
+                >
+                  Actualizar Contraseña
+                </button>
+              </div>
+            </div>
+          )}
+        </motion.div>
+      )
+    }
+  }, [isChangingPassword, userProfile, getAuthHeaders])
 
   if (loading) return <div className="text-center mt-10">Cargando perfil...</div>
   if (error) return <div className="text-center mt-10 text-red-500">Error: {error}</div>
@@ -375,7 +394,7 @@ export default function ProfilePage() {
 
             </div>
             <div className="flex items-center">
-              <Shield size={16} className="mr-2" />
+              <ShieldCheck size={16} className="mr-2" />
               <span>Cuenta Verificada</span>
             </div>
           </motion.div>
