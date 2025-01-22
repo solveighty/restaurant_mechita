@@ -44,15 +44,6 @@ public class VerificationController {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "El código ha expirado");
         }
 
-        /*UsuarioEntity usuario = usuarioRepository.findByEmail(email)
-                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Usuario no encontrado"));
-
-        if (!usuario.isCuentaVerificada()) {
-            usuario.setCuentaVerificada(true);
-            usuario.setMiembroDesde(LocalDateTime.now());
-            usuarioRepository.save(usuario);
-        }*/
-
         return ResponseEntity.ok("Código verificado exitosamente");
     }
 }

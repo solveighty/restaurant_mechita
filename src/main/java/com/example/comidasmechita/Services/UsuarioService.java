@@ -65,6 +65,7 @@ public class UsuarioService {
             }
 
             // Guardar el usuario (con el carrito automáticamente si hay cascada configurada)
+            usuario.setCuentaVerificada(true);
             return usuarioRepository.save(usuario);
         } catch (Exception e) {
             throw new RuntimeException("Error al guardar el usuario", e);
