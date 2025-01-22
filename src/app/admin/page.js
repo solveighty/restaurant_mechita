@@ -17,6 +17,7 @@ export default function AdminDashboard() {
   const [error, setError] = useState(null)
   const [ventas, setVentas] = useState([])
   const [rangoVentas, setRangoVentas] = useState('diario')
+  const [totalVentas, setTotalVentas] = useState(0)
 
   useEffect(() => {
     const fetchData = async () => {
@@ -35,8 +36,9 @@ export default function AdminDashboard() {
         )
 
         const ventasData = ventasResponse.data.historial || []
-        
-        const totalVentas = ventasData.reduce((total, venta) => 
+
+        // Calcula el total acumulado de las ventas
+        const totalAcumulado = ventasData.reduce((total, venta) => 
           total + (venta.detalles ? calcularTotalVenta(venta.detalles) : 0), 0
         )
 
@@ -64,6 +66,7 @@ export default function AdminDashboard() {
           }
         ])
         setVentas(ventasData)
+        setTotalVentas(totalAcumulado) // Actualiza el total de ventas
       } catch (err) {
         console.error('Error fetching data:', err)
         setError(err.message)
@@ -77,10 +80,10 @@ export default function AdminDashboard() {
 
   const calcularTotalVenta = (detalles) => {
     return detalles.reduce((total, detalle) => {
-        const totalItem = detalle.precio;
-        return total + totalItem;
-    }, 0);
-  };
+        const totalItem = detalle.precio
+        return total + totalItem
+    }, 0)
+  }
 
   const handleRangoChange = (event) => {
     setRangoVentas(event.target.value)
@@ -88,7 +91,7 @@ export default function AdminDashboard() {
 
   if (loading) return <div className="flex justify-center p-6">Cargando...</div>
   if (error) return <div className="text-red-500 p-6">Error: {error}</div>
-  
+
   return (
     <div className="space-y-6">
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -132,6 +135,11 @@ export default function AdminDashboard() {
             <option value="anual">Anual</option>
           </select>
         </div>
+        <div className="mb-4">
+          <h3 className="text-lg font-semibold">
+            Total Ventas: ${totalVentas.toLocaleString()}
+          </h3>
+        </div>
         <div className="overflow-x-auto">
           <table className="min-w-full">
             <thead>
@@ -159,4 +167,4 @@ export default function AdminDashboard() {
       </div>
     </div>
   )
-} 
+}
