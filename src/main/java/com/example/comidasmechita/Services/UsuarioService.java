@@ -140,4 +140,7 @@ public class UsuarioService {
         return enteredPasswordHash.equals(storedHash);
     }
 
+    public long getTotalUsuarios() {
+        return usuarioRepository.count();
+    }
 }

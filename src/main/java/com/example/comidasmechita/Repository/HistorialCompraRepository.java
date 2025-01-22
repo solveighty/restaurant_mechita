@@ -9,4 +9,5 @@ import java.util.List;
 public interface HistorialCompraRepository extends JpaRepository<HistorialCompraEntity, Long> {
     List<HistorialCompraEntity> findByUsuarioId(Long usuarioId);
     List<HistorialCompraEntity> findByFechaCompraBetween(LocalDateTime startDate, LocalDateTime endDate);
+    long countByFechaCompraBetween(LocalDateTime inicio, LocalDateTime fin);
 }

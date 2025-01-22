@@ -111,4 +111,9 @@ public class HistorialCompraService {
 
         return response;
     }
+
+    public long contarPedidosPorIntervalo(LocalDateTime inicio, LocalDateTime fin) {
+        return historialCompraRepository.countByFechaCompraBetween(inicio, fin);
+    }
+
 }
