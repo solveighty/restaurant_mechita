@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import axios from 'axios'
@@ -42,6 +42,14 @@ export default function RegisterPage() {
     direccion: '',
     contrasena: '',
   })
+
+  // Verificar si el usuario ya está autenticado
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      router.push('/');
+    }
+  }, [router]);
 
   const handleChange = (e) => {
     setFormData({

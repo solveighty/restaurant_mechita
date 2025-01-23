@@ -57,7 +57,6 @@ export default function OrdersPage() {
         });
 
         const data = response.data
-        console.log('Datos del servidor:', data) // Para ver la estructura exacta
         setPedidos(data)
       } catch (error) {
         console.error('Error al cargar pedidos:', error)

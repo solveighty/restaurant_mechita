@@ -4,13 +4,15 @@ import { useState, useEffect, useRef } from 'react'
 import Link from 'next/link'
 import { usePathname, useRouter } from 'next/navigation'
 import { motion, AnimatePresence } from 'framer-motion'
-import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell, Trash2, Package } from 'lucide-react'
+import { User, LogOut, Menu as MenuIcon, X, Book, Phone, UserCircle, Bell, Trash2, Package, LayoutDashboard } from 'lucide-react'
 import { ShoppingCart } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 import CartItem from './Cart/CartItem'
 import CartFooter from './Cart/CartFooter'
 import { useNotifications } from '@/context/NotificationContext'
 import NotificationItem from './Notifications/NotificationItem'
+import axios from 'axios'
+import url_Backend from '@/context/config'
 
 
 export default function Navbar() {
@@ -21,6 +23,8 @@ export default function Navbar() {
   const router = useRouter()
   const { cartItems, loading: cartLoading } = useCart()
   const { notifications, loading: notificationsLoading, markAsRead } = useNotifications()
+  const [userRole, setUserRole] = useState(null)
+  const [userId, setUserId] = useState(null)
 
   // Referencias para los menús
   const notificationRef = useRef(null)
@@ -47,9 +51,46 @@ export default function Navbar() {
     }
   }, [])
 
-  // Función de logout (mover antes de userNavigation)
+  // Verificar el token y obtener el rol cuando cambie la ruta
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      try {
+        const payload = JSON.parse(atob(token.split('.')[1]));
+        setUserId(payload.id);
+        
+        // Obtener información del usuario
+        const fetchUserRole = async () => {
+          try {
+            const response = await axios.get(
+              `http://${url_Backend}:8080/usuarios/obtenerusuario/${payload.id}`,
+              {
+                headers: {
+                  'Authorization': `Bearer ${token}`
+                }
+              }
+            );
+            setUserRole(response.data.rol);
+          } catch (error) {
+            console.error('Error al obtener rol del usuario:', error);
+          }
+        };
+
+        fetchUserRole();
+      } catch (error) {
+        console.error('Error al decodificar el token:', error);
+      }
+    } else {
+      setUserRole(null);
+      setUserId(null);
+    }
+  }, [pathname]);
+
+  // Función de logout (actualizar para limpiar el userRole)
   const handleLogout = () => {
     localStorage.removeItem('token');
+    setUserRole(null);
+    setUserId(null);
     setTimeout(() => {
       setIsUserMenuOpen(false);
       router.push('/account/login'); 
@@ -64,6 +105,9 @@ export default function Navbar() {
   const userNavigation = [
     { name: 'Perfil', href: '/account/profile', icon: UserCircle },
     { name: 'Mis Pedidos', href: '/account/orders', icon: Package },
+    ...(userRole === 'ADMIN' ? [
+      { name: 'Dashboard', href: '/admin', icon: LayoutDashboard }
+    ] : []),
     { name: 'Cerrar Sesión', href: '#', icon: LogOut, onClick: handleLogout },
   ]
 

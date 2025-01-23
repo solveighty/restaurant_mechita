@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import Link from 'next/link'
 import { motion } from 'framer-motion'
 import { Mail, Lock, Eye, EyeOff, ArrowRight } from 'lucide-react'
@@ -42,6 +42,14 @@ export default function LoginPage() {
     password: ''
   });
 
+  // Verificar si el usuario ya está autenticado
+  useEffect(() => {
+    const token = localStorage.getItem('token');
+    if (token) {
+      router.push('/');
+    }
+  }, [router]);
+
   const validateForm = () => {
     const errors = {};
 
@@ -74,10 +82,18 @@ export default function LoginPage() {
       const data = response.data;
       localStorage.setItem('token', data.token);
 
+      // Decodificar el token para obtener el rol
+      try {
+        const payload = JSON.parse(atob(data.token.split('.')[1]));
+        localStorage.setItem('userRole', payload.rol);
+      } catch (error) {
+        console.error('Error al decodificar el token:', error);
+      }
+
       router.push('/');
       toast.success('Bienvenido a Comidas Mechita', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
     } catch (error) {
-      console.error('Error al iniciar sesión:');
+      console.error('Error al iniciar sesión:', error);
       toast.error('Error al iniciar sesión, revisa tus credenciales', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
     }
   };

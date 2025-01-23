@@ -44,7 +44,6 @@ export function CartProvider({ children }) {
         }
       })
       
-      console.log('Respuesta del carrito:', response.data)
       
       // Asumiendo que la respuesta tiene la estructura correcta
       if (response.data && response.data.items) {
