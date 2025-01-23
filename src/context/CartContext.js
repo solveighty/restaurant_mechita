@@ -5,6 +5,7 @@ import axios from 'axios'
 import { decodeJwt } from 'jose'
 import url_Backend from './config'
 import { toast } from 'react-toastify';
+import { useNotifications } from './NotificationContext'
 
 const CartContext = createContext()
 
@@ -13,6 +14,8 @@ export function CartProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO')
+
+  const { fetchNotifications } = useNotifications()
 
   // Obtener userId del token
   useEffect(() => {
@@ -103,16 +106,23 @@ export function CartProvider({ children }) {
         }
       )
 
-      toast.success('Pago realizado exitosamente', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
-
-
       if (response.status === 200) {
-        setCartItems([]) // Limpiar carrito después del pago exitoso
+        toast.success('Pago realizado exitosamente', { 
+          autoClose: 2000, 
+          closeOnClick: true, 
+          hideProgressBar: true 
+        });
+        setCartItems([]) // Limpiar carrito
+        await fetchNotifications() // Actualizar notificaciones
         return true
       }
       return false
     } catch (error) {
-      toast.error('Error al procesar el pago', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
+      toast.error('Error al procesar el pago', { 
+        autoClose: 2000, 
+        closeOnClick: true, 
+        hideProgressBar: true 
+      });
       console.error('Error al procesar el pago:', error)
       return false
     }

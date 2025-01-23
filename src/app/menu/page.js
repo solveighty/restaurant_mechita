@@ -8,6 +8,8 @@ import { motion, AnimatePresence } from 'framer-motion'
 import * as jose from 'jose'
 import { toast } from 'react-toastify';
 import url_Backend from '@/context/config'
+import { useCart } from '@/context/CartContext'
+import { useNotifications } from '@/context/NotificationContext'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -58,6 +60,8 @@ export default function MenuDisplay() {
   const [selectedItem, setSelectedItem] = useState(null)
   const [quantity, setQuantity] = useState(1)
   const [userId, setUserId] = useState(null)
+  const { fetchCartItems } = useCart()
+  const { fetchNotifications } = useNotifications()
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -165,14 +169,17 @@ export default function MenuDisplay() {
       )
 
       if (response.status === 200 || response.status === 201) {
-        // Puedes agregar aquí alguna notificación de éxito
-        console.log('Producto agregado al carrito exitosamente')
-        toast.success('Producto agregado al carrito exitosamente', { autoClose: 2000, closeOnClick: true, hideProgressBar: true });
+        toast.success('Producto agregado al carrito exitosamente', { 
+          autoClose: 2000, 
+          closeOnClick: true, 
+          hideProgressBar: true 
+        });
+        await fetchCartItems()
         handleCloseModal()
       }
     } catch (error) {
       console.error('Error al agregar al carrito:', error)
-      // Puedes agregar aquí alguna notificación de error
+      toast.error('Error al agregar al carrito')
     }
   }
 
