@@ -5,7 +5,7 @@ const axios = require('axios');
 // Token del bot de Telegram
 const token = process.env.BOT_TOKEN;
 
-const url_Backend = '192.168.192.20'
+const url_Backend = 'localhost'
 
 // Crear el bot usando 'polling' para recibir actualizaciones
 const bot = new TelegramBot(token, { polling: true });
@@ -278,8 +278,42 @@ bot.on('callback_query', async (query) => {
       });
 
       if (response.status >= 200 && response.status < 300) {
-        bot.sendMessage(chatId, '¡El producto ha sido eliminado del carrito!');
-        bot.emit('text', { chat: { id: chatId }, text: '/carrito' });
+        // Obtener el carrito actualizado
+        const carritoResponse = await axios.get(`http://${url_Backend}:8080/carrito/${session.id}`, {
+          headers: {
+            'Authorization': `Bearer ${session.token}`,
+            'Content-Type': 'application/json'
+          }
+        });
+
+        const carrito = carritoResponse.data;
+
+        if (carrito.items.length === 0) {
+          bot.sendMessage(chatId, 'El producto ha sido eliminado. Tu carrito está vacío.');
+          return;
+        }
+
+        let total = 0;
+        let mensajeCarrito = '🛒 *Tu Carrito Actualizado:*\n\n';
+        const buttons = [];
+
+        carrito.items.forEach((item, index) => {
+          mensajeCarrito += `${index + 1}. *${item.menu.nombre}*\n   Cantidad: ${item.cantidad}\n   Precio: $${item.menu.precio}\n\n`;
+          total += item.menu.precio * item.cantidad;
+          buttons.push([{
+            text: `Eliminar ${item.menu.nombre}`,
+            callback_data: `eliminar_${item.id}`,
+          }]);
+        });
+
+        mensajeCarrito += `\n*Total a pagar:* $${total.toFixed(2)}`;
+
+        bot.sendMessage(chatId, mensajeCarrito, {
+          parse_mode: 'Markdown',
+          reply_markup: {
+            inline_keyboard: buttons
+          }
+        });
       } else {
         bot.sendMessage(chatId, 'Ocurrió un error al eliminar el producto. Intenta nuevamente más tarde.');
       }
