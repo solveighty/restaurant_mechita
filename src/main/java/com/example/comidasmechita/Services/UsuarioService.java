@@ -2,7 +2,6 @@ package com.example.comidasmechita.Services;
 
 import com.example.comidasmechita.Entity.CarritoEntity;
 import com.example.comidasmechita.Entity.UsuarioEntity;
-import com.example.comidasmechita.Repository.CarritoRepository;
 import com.example.comidasmechita.Repository.UsuarioRepository;
 import com.example.comidasmechita.Security.PasswordEncoder;
 import org.springframework.beans.factory.annotation.Autowired;

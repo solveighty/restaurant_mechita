@@ -1,10 +1,8 @@
 package com.example.comidasmechita.Controller;
 
-import com.example.comidasmechita.Entity.HistorialCompraEntity;
 import com.example.comidasmechita.Entity.UsuarioEntity;
 import com.example.comidasmechita.Repository.NotificacionRepository;
 import com.example.comidasmechita.Repository.UsuarioRepository;
-import com.example.comidasmechita.Services.HistorialCompraService;
 import com.example.comidasmechita.Services.NotificacionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;

@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.Setter;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 @Entity
 @Getter
@@ -23,6 +25,8 @@ public class UsuarioEntity {
     @Email(message = "El correo electrónico debe tener un formato válido")
     private String email;
     private String direccion;
+    @ElementCollection
+    private List<String> direccionesTemporales = new ArrayList<>();
     private LocalDateTime miembroDesde = LocalDateTime.now();
     private boolean cuentaVerificada;
 
@@ -38,5 +42,12 @@ public class UsuarioEntity {
     public enum Rol{
         ADMIN,
         NORMAL
+    }
+
+    public void agregarDireccionTemporal(String direccion) {
+        if (this.direccionesTemporales == null) {
+            this.direccionesTemporales = new ArrayList<>();
+        }
+        this.direccionesTemporales.add(direccion);
     }
 }

@@ -1,6 +1,7 @@
 package com.example.comidasmechita.Controller;
 
 import com.example.comidasmechita.Entity.UsuarioEntity;
+import com.example.comidasmechita.Repository.UsuarioRepository;
 import com.example.comidasmechita.Security.JwtUtil;
 import com.example.comidasmechita.Services.UsuarioService;
 import jakarta.validation.Valid;
@@ -13,7 +14,6 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.NoSuchAlgorithmException;
-import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
@@ -24,6 +24,9 @@ import java.util.Optional;
 public class UsuarioController {
     @Autowired
     private UsuarioService usuarioService;
+
+    @Autowired
+    private UsuarioRepository usuarioRepository;
 
     @Autowired
     private JwtUtil jwtUtil;
@@ -110,6 +113,22 @@ public class UsuarioController {
     public ResponseEntity<Boolean> esAdmin(@PathVariable Long id) {
         boolean isAdmin = usuarioService.isAdmin(id);
         return ResponseEntity.ok(isAdmin);
+    }
+
+    @PostMapping("/{id}/direccion-temporal")
+    public void agregarDireccionTemporal(@PathVariable Long id, @RequestBody String direccionTemporal) {
+        UsuarioEntity usuario = usuarioRepository.findById(id).orElseThrow();
+        usuario.agregarDireccionTemporal(direccionTemporal);
+        usuarioRepository.save(usuario);
+    }
+
+    @GetMapping("/{id}/direcciones")
+    public List<String> obtenerDirecciones(@PathVariable Long id) {
+        UsuarioEntity usuario = usuarioRepository.findById(id).orElseThrow();
+        // Devolver la dirección permanente y las direcciones temporales
+        List<String> direcciones = List.of(usuario.getDireccion());
+        direcciones.addAll(usuario.getDireccionesTemporales());
+        return direcciones;
     }
 
     @Getter
