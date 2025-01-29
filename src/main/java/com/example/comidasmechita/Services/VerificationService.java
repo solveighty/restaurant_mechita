@@ -32,8 +32,14 @@ public class VerificationService {
     private void sendVerificationEmail(String email, String code) {
         SimpleMailMessage message = new SimpleMailMessage();
         message.setTo(email);
-        message.setSubject("Código de Verificación");
-        message.setText("Tu código de verificación es: " + code);
+        message.setSubject("Código de Verificación - Comidas Mechita");
+        message.setText("Hola,\n\n" +
+                "Gracias por registrarte en Comidas Mechita. Para completar tu proceso de registro, por favor ingresa el siguiente código de verificación en la página web:\n\n" +
+                "Código: " + code + "\n\n" +
+                "Este código es válido por 3 minutos. Si no solicitaste este código, ignora este mensaje.\n\n" +
+                "¡Gracias por confiar en nosotros!\n\n" +
+                "Saludos,\n" +
+                "El equipo de Comidas Mechita");
         mailSender.send(message);
     }
 }

@@ -52,14 +52,18 @@ public class CarritoController {
     }
 
     @PutMapping("/pagar/{carritoId}")
-    public ResponseEntity<Map<String, String>> pagarCarrito(@PathVariable Long carritoId) {
-        carritoService.simularPago(carritoId);
+    public ResponseEntity<Map<String, String>> pagarCarrito(
+            @PathVariable Long carritoId,
+            @RequestBody Map<String, String> request) {
+        
+        String metodoPago = request.get("metodoPago");
+        String direccionEnvio = request.get("direccionEnvio");
+        
+        carritoService.simularPago(carritoId, metodoPago, direccionEnvio);
 
-        // Crear un mapa para incluir el mensaje de respuesta
         Map<String, String> response = new HashMap<>();
         response.put("message", "Pago exitoso. Carrito vaciado y notificaciones enviadas.");
-
-        // Retornar un ResponseEntity con el mensaje
-        return ResponseEntity.ok(response);  // Retorna el estado 200 OK con el mensaje
+        
+        return ResponseEntity.ok(response);
     }
 }

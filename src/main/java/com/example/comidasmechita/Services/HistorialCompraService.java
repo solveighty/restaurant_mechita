@@ -26,11 +26,13 @@ public class HistorialCompraService {
     private NotificacionService notificacionService;
 
     @Transactional
-    public HistorialCompraEntity registrarCompra(CarritoEntity carrito) {
+    public HistorialCompraEntity registrarCompra(CarritoEntity carrito, String metodoPago, String direccionEnvio) {
         // Crear un nuevo historial de compra
         HistorialCompraEntity historialCompra = new HistorialCompraEntity();
         historialCompra.setUsuario(carrito.getUsuario());
         historialCompra.setFechaCompra(LocalDateTime.now());
+        historialCompra.setMetodoPago(metodoPago);
+        historialCompra.setDireccionEnvio(direccionEnvio);
 
         // Convertir ítems del carrito en detalles de compra
         List<DetalleCompraEntity> detalles = carrito.getItems().stream().map(item -> {

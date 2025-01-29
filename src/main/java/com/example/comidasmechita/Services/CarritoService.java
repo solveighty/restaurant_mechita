@@ -102,22 +102,18 @@ public class CarritoService {
     }
 
     @Transactional
-    public void simularPago(Long carritoId) {
-        // Buscar el carrito por el ID
+    public void simularPago(Long carritoId, String metodoPago, String direccionEnvio) {
         CarritoEntity carrito = carritoRepository.findById(carritoId)
                 .orElseThrow(() -> new RuntimeException("Carrito no encontrado"));
 
-        // 1. Calcular el total del carrito
         double total = calcularTotal(carrito);
         System.out.println("Total a pagar: " + total);
 
-        // 2. Simulamos que el pago ha sido realizado exitosamente
         boolean pagoExitoso = realizarPagoSimulado(total);
 
         if (pagoExitoso) {
-            // 3. Registrar compra en el historial y obtener el objeto con el ID generado
-            HistorialCompraEntity historialCompra = historialCompraService.registrarCompra(carrito);
-
+            HistorialCompraEntity historialCompra = historialCompraService.registrarCompra(carrito, metodoPago, direccionEnvio);
+            
             // 4. Vaciar los ítems del carrito después de realizar el pago
             carrito.getItems().clear();
 

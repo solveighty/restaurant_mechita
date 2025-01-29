@@ -14,6 +14,7 @@ import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 import java.security.NoSuchAlgorithmException;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
@@ -125,10 +126,30 @@ public class UsuarioController {
     @GetMapping("/{id}/direcciones")
     public List<String> obtenerDirecciones(@PathVariable Long id) {
         UsuarioEntity usuario = usuarioRepository.findById(id).orElseThrow();
-        // Devolver la dirección permanente y las direcciones temporales
-        List<String> direcciones = List.of(usuario.getDireccion());
+
+        // Crear una lista mutable e inicializarla con la dirección permanente
+        List<String> direcciones = new ArrayList<>();
+
+        // Agregar las direcciones temporales a la lista
         direcciones.addAll(usuario.getDireccionesTemporales());
+
         return direcciones;
+    }
+
+    @DeleteMapping("/{id}/direccion-temporal")
+    public void eliminarDireccionTemporal(@PathVariable Long id, @RequestBody String direccionTemporal) {
+        UsuarioEntity usuario = usuarioRepository.findById(id).orElseThrow();
+
+        usuario.getDireccionesTemporales().remove(direccionTemporal); // Eliminar la dirección específica
+        usuarioRepository.save(usuario);
+    }
+
+    @DeleteMapping("/{id}/direcciones-temporales")
+    public void eliminarTodasLasDireccionesTemporales(@PathVariable Long id) {
+        UsuarioEntity usuario = usuarioRepository.findById(id).orElseThrow();
+
+        usuario.getDireccionesTemporales().clear(); // Eliminar todas las direcciones temporales
+        usuarioRepository.save(usuario);
     }
 
     @Getter

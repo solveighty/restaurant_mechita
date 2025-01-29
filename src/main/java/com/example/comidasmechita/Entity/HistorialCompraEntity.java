@@ -26,6 +26,9 @@ public class HistorialCompraEntity {
     @JoinColumn(name = "historial_id")
     private List<DetalleCompraEntity> detalles;
 
+    private String metodoPago;
+    private String direccionEnvio;
+
     @Enumerated(EnumType.STRING)
     public EstadoCompra estadoCompra = EstadoCompra.EN_PROCESO;
 
