@@ -6,6 +6,11 @@ export default function OrderDetailModal({ order, onClose }) {
   // Calcular el total del pedido
   const total = order.detalles.reduce((sum, item) => sum + item.precio, 0)
 
+  // Función para formatear el método de pago
+  const formatPaymentMethod = (method) => {
+    return method === 'EFECTIVO' ? 'Efectivo' : 'Tarjeta'
+  }
+
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center p-2 sm:p-4">
       <div className="bg-white rounded-lg w-full max-w-2xl max-h-[90vh] overflow-y-auto">
@@ -42,8 +47,14 @@ export default function OrderDetailModal({ order, onClose }) {
                 <span className="font-medium">Teléfono:</span> {order.usuario.telefono}
               </p>
               <p className="text-xs sm:text-sm text-gray-900">
-                <span className="font-medium">Dirección:</span> {order.usuario.direccion}
+                <span className="font-medium">Dirección principal:</span> {order.usuario.direccion}
               </p>
+              {order.direccionEnvio && order.direccionEnvio !== order.usuario.direccion && (
+                <p className="text-xs sm:text-sm text-gray-900">
+                  <span className="font-medium">Dirección de envío:</span>{' '}
+                  <span className="text-orange-600">{order.direccionEnvio}</span>
+                </p>
+              )}
             </div>
           </div>
 
@@ -56,6 +67,10 @@ export default function OrderDetailModal({ order, onClose }) {
               <p className="text-xs sm:text-sm text-gray-900">
                 <span className="font-medium">Fecha de Compra:</span>{' '}
                 {new Date(order.fechaCompra).toLocaleString()}
+              </p>
+              <p className="text-xs sm:text-sm text-gray-900">
+                <span className="font-medium">Método de Pago:</span>{' '}
+                <span className="capitalize">{formatPaymentMethod(order.metodoPago)}</span>
               </p>
               <p className="text-xs sm:text-sm text-gray-900">
                 <span className="font-medium">Estado:</span>{' '}

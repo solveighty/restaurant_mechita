@@ -189,7 +189,7 @@ export default function OrdersPage() {
                   </div>
                 </div>
 
-                {/* Información del cliente */}
+                {/* Información del cliente y entrega */}
                 <div className="mb-4 p-4 bg-gray-50 rounded-lg">
                   <h4 className="text-sm font-medium text-gray-900 mb-2">Información de entrega</h4>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
@@ -198,9 +198,15 @@ export default function OrdersPage() {
                       <p className="font-medium">{pedido.usuario.nombre}</p>
                     </div>
                     <div>
-                      <p className="text-gray-500">Dirección</p>
+                      <p className="text-gray-500">Dirección principal</p>
                       <p className="font-medium">{pedido.usuario.direccion}</p>
                     </div>
+                    {pedido.direccionEnvio && (
+                      <div className="md:col-span-2">
+                        <p className="text-gray-500">Dirección de envío seleccionada</p>
+                        <p className="font-medium text-orange-600">{pedido.direccionEnvio}</p>
+                      </div>
+                    )}
                     <div>
                       <p className="text-gray-500">Teléfono</p>
                       <p className="font-medium">{pedido.usuario.telefono}</p>
@@ -208,6 +214,12 @@ export default function OrdersPage() {
                     <div>
                       <p className="text-gray-500">Email</p>
                       <p className="font-medium">{pedido.usuario.email}</p>
+                    </div>
+                    <div>
+                      <p className="text-gray-500">Método de pago</p>
+                      <p className="font-medium">
+                        {pedido.metodoPago === 'EFECTIVO' ? 'Efectivo' : 'Tarjeta'}
+                      </p>
                     </div>
                   </div>
                 </div>

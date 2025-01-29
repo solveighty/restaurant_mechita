@@ -14,6 +14,7 @@ export function CartProvider({ children }) {
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
   const [paymentMethod, setPaymentMethod] = useState('EFECTIVO')
+  const [selectedAddress, setSelectedAddress] = useState('')
 
   const { fetchNotifications } = useNotifications()
 
@@ -88,15 +89,26 @@ export function CartProvider({ children }) {
     }
   }
 
-  // Función para procesar el pago
-  const processPayment = async () => {
+  // Función para procesar el pago actualizada
+  const processPayment = async (direccionEnvio) => {
     if (!userId) return false
+    if (!direccionEnvio) {
+      toast.error('Por favor selecciona una dirección de envío', { 
+        autoClose: 2000, 
+        closeOnClick: true, 
+        hideProgressBar: true 
+      });
+      return false
+    }
 
     try {
       const token = localStorage.getItem('token')
       const response = await axios.put(
         `http://${url_Backend}:8080/carrito/pagar/${userId}`,
-        { metodoPago: paymentMethod },
+        { 
+          metodoPago: paymentMethod,
+          direccionEnvio: direccionEnvio 
+        },
         {
           headers: {
             'Authorization': `Bearer ${token}`,
@@ -112,6 +124,7 @@ export function CartProvider({ children }) {
           hideProgressBar: true 
         });
         setCartItems([]) // Limpiar carrito
+        setSelectedAddress('') // Limpiar dirección seleccionada
         await fetchNotifications() // Actualizar notificaciones
         return true
       }
@@ -137,6 +150,8 @@ export function CartProvider({ children }) {
     loading,
     paymentMethod,
     setPaymentMethod,
+    selectedAddress,
+    setSelectedAddress,
     removeItem,
     processPayment,
     calculateTotal,
