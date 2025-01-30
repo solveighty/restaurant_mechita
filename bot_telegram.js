@@ -236,40 +236,85 @@ bot.onText(/\/carrito/, async (msg) => {
   }
 });
 
-// Manejador de callback para eliminar ítems del carrito
+// Actualizar el manejador de callback para separar la lógica de direcciones y carrito
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const session = userSessions[chatId];
   const data = query.data.split('_');
   const action = data[0];
-  const itemId = data[1];
 
-  if (action === 'select') {
+  if (!session) {
+    bot.sendMessage(chatId, 'Por favor, inicia sesión primero con el comando /login.');
+    return;
+  }
+
+  if (action === 'eliminar' && data[1] === 'direccion') {
+    const direccion = data.slice(2).join('_');
     try {
-      const menuResponse = await axios.get(`http://${url_Backend}:8080/menu`, {
-        headers: {
-          'Authorization': `Bearer ${session?.token}`,
-          'Content-Type': 'application/json'
+      console.log('Intentando eliminar dirección:', direccion);
+      console.log('Usuario ID:', session.id);
+      
+      await axios.delete(
+        `http://${url_Backend}:8080/usuarios/${session.id}/direccion-temporal`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.token}`,
+            'Content-Type': 'text/plain'  // Cambiado a text/plain
+          },
+          data: direccion  // Enviando la dirección directamente como texto
         }
-      });
-      const menuItem = menuResponse.data.find(item => item.id == itemId);
-
-      if (!menuItem) {
-        bot.sendMessage(chatId, 'No se encontró el menú seleccionado. Por favor, intenta nuevamente.');
-        return;
+      );
+      
+      // Verificar si la dirección fue eliminada
+      const verificacionResponse = await axios.get(
+        `http://${url_Backend}:8080/usuarios/${session.id}/direcciones`,
+        {
+          headers: { 'Authorization': `Bearer ${session.token}` }
+        }
+      );
+      
+      const direccionesActuales = verificacionResponse.data;
+      if (direccionesActuales.includes(direccion)) {
+        throw new Error('La dirección no fue eliminada correctamente');
       }
-
-      // Guardar la selección pendiente para este chat
-      pendingSelections[chatId] = { menuId: itemId, menuName: menuItem.nombre };
-
-      bot.sendMessage(chatId, `Has seleccionado *${menuItem.nombre}*. Por favor, ingresa la cantidad que deseas agregar:`, { parse_mode: 'Markdown' });
+      
+      bot.sendMessage(chatId, '¡Dirección temporal eliminada con éxito!');
+      // Actualizar la lista de direcciones
+      bot.deleteMessage(chatId, query.message.message_id);
+      bot.emit('text', { chat: { id: chatId }, text: '/verDirecciones' });
     } catch (error) {
-      console.error('Error al obtener el menú seleccionado:', error.message);
-      bot.sendMessage(chatId, 'Ocurrió un error al obtener los detalles del menú seleccionado.');
+      console.error('Error al eliminar dirección temporal:', error);
+      console.error('Detalles de la solicitud:', {
+        direccion: direccion,
+        userId: session.id,
+        error: error.response?.data
+      });
+      bot.sendMessage(chatId, 'Ocurrió un error al eliminar la dirección temporal. Por favor, intenta nuevamente.');
     }
-  } else if (action === 'eliminar') {
+  } else if (action === 'eliminar' && data[1] === 'todas' && data[2] === 'direcciones') {
+    try {
+      await axios.delete(
+        `http://${url_Backend}:8080/usuarios/${session.id}/direcciones-temporales`,
+        {
+          headers: {
+            'Authorization': `Bearer ${session.token}`
+          }
+        }
+      );
+      
+      bot.sendMessage(chatId, '¡Todas las direcciones temporales han sido eliminadas!');
+      // Actualizar la lista de direcciones
+      bot.deleteMessage(chatId, query.message.message_id);
+      bot.emit('text', { chat: { id: chatId }, text: '/verDirecciones' });
+    } catch (error) {
+      console.error('Error al eliminar todas las direcciones temporales:', error);
+      bot.sendMessage(chatId, 'Ocurrió un error al eliminar las direcciones temporales. Por favor, intenta nuevamente.');
+    }
+  } else if (action === 'eliminar' && !isNaN(data[1])) {
+    // Esta es la lógica original para eliminar items del carrito
     try {
       const carritoId = session.carritoId;
+      const itemId = data[1];
       const response = await axios.delete(`http://${url_Backend}:8080/carrito/eliminar/${carritoId}/${itemId}`, {
         headers: {
           'Authorization': `Bearer ${session.token}`,
@@ -318,8 +363,59 @@ bot.on('callback_query', async (query) => {
         bot.sendMessage(chatId, 'Ocurrió un error al eliminar el producto. Intenta nuevamente más tarde.');
       }
     } catch (error) {
-      console.error('Error al eliminar el producto:', error.message);
-      bot.sendMessage(chatId, 'Ocurrió un error al eliminar el producto. Intenta nuevamente más tarde.');
+      console.error('Error al eliminar el producto del carrito:', error);
+      bot.sendMessage(chatId, 'Ocurrió un error al eliminar el producto del carrito. Por favor, intenta nuevamente.');
+    }
+  } else if (action === 'dir') {
+    const tipoDir = data[1];
+    const direccion = data.slice(2).join('_');
+    
+    // Guardar la dirección seleccionada
+    session.pagoEnProceso = {
+      ...session.pagoEnProceso,
+      direccionEnvio: direccion,
+      paso: 'seleccion_pago'
+    };
+
+    // Mostrar opciones de pago
+    const botonesMetodoPago = [
+      [{ text: 'Efectivo', callback_data: 'pago_efectivo' }],
+      [{ text: 'Tarjeta', callback_data: 'pago_tarjeta' }]
+    ];
+
+    bot.sendMessage(chatId, 'Por favor, selecciona el método de pago:', {
+      reply_markup: {
+        inline_keyboard: botonesMetodoPago
+      }
+    });
+  } else if (action === 'pago') {
+    const metodoPago = data[1];
+    
+    try {
+      const response = await axios.put(
+        `http://${url_Backend}:8080/carrito/pagar/${session.carritoId}`,
+        {
+          metodoPago: metodoPago === 'efectivo' ? 'Efectivo' : 'Tarjeta',
+          direccionEnvio: session.pagoEnProceso.direccionEnvio
+        },
+        {
+          headers: {
+            'Authorization': `Bearer ${session.token}`,
+            'Content-Type': 'application/json'
+          }
+        }
+      );
+
+      if (response.status === 200) {
+        bot.sendMessage(chatId, '¡Pago procesado con éxito! Tu pedido será enviado a la dirección seleccionada.');
+        // Limpiar el estado del proceso de pago
+        delete session.pagoEnProceso;
+      } else {
+        throw new Error('Respuesta inesperada del servidor');
+      }
+    } catch (error) {
+      console.error('Error al procesar el pago:', error);
+      bot.sendMessage(chatId, 'Ocurrió un error al procesar el pago. Por favor, intenta más tarde.');
     }
   }
 });
@@ -335,25 +431,46 @@ bot.onText(/\/pagar/, async (msg) => {
   }
 
   try {
-    const response = await axios.put(`http://${url_Backend}:8080/carrito/pagar/${session.carritoId}`, 
-      { metodoPago: 'Efectivo' },
+    // Obtener dirección principal
+    const direccionPrincipalResponse = await axios.get(
+      `http://${url_Backend}:8080/usuarios/obtenerusuario/${session.id}`,
       {
-        headers: {
-          'Authorization': `Bearer ${session.token}`,
-          'Content-Type': 'application/json'
-        }
+        headers: { 'Authorization': `Bearer ${session.token}` }
       }
     );
 
-    // Verificar si la respuesta del backend es exitosa
-    if (response.status === 200) {
-      bot.sendMessage(chatId, '¡Pago procesado con éxito! Tu carrito ha sido vaciado.');
-    } else {
-      throw new Error('Respuesta inesperada del servidor');
-    }
+    // Obtener direcciones temporales
+    const direccionesTemporalesResponse = await axios.get(
+      `http://${url_Backend}:8080/usuarios/${session.id}/direcciones`,
+      {
+        headers: { 'Authorization': `Bearer ${session.token}` }
+      }
+    );
+
+    const direccionPrincipal = direccionPrincipalResponse.data.direccion;
+    const direccionesTemporales = direccionesTemporalesResponse.data;
+
+    // Crear botones para selección de dirección
+    const buttons = [
+      [{ text: `Dirección Principal: ${direccionPrincipal}`, callback_data: `dir_principal_${direccionPrincipal}` }]
+    ];
+
+    direccionesTemporales.forEach(dir => {
+      buttons.push([{ text: `Dirección Temporal: ${dir}`, callback_data: `dir_temporal_${dir}` }]);
+    });
+
+    // Guardar estado temporal para el proceso de pago
+    session.pagoEnProceso = { paso: 'seleccion_direccion' };
+
+    bot.sendMessage(chatId, 'Por favor, selecciona la dirección de envío:', {
+      reply_markup: {
+        inline_keyboard: buttons
+      }
+    });
 
   } catch (error) {
     console.error('Error al procesar el pago:', error);
+    bot.sendMessage(chatId, 'Ocurrió un error al procesar el pago. Por favor, intenta más tarde.');
   }
 });
 
@@ -566,6 +683,106 @@ bot.on('message', async (msg) => {
   }
 });
 
+// Comando para agregar dirección temporal
+bot.onText(/\/agregarDireccion (.+)/, async (msg, match) => {
+  const chatId = msg.chat.id;
+  const session = userSessions[chatId];
+  const nuevaDireccion = match[1];
+
+  if (!session) {
+    bot.sendMessage(chatId, 'Por favor, inicia sesión primero con el comando /login.');
+    return;
+  }
+
+  try {
+    await axios.post(
+      `http://${url_Backend}:8080/usuarios/${session.id}/direccion-temporal`,
+      nuevaDireccion,
+      {
+        headers: {
+          'Authorization': `Bearer ${session.token}`,
+          'Content-Type': 'text/plain'
+        }
+      }
+    );
+
+    bot.sendMessage(chatId, '¡Dirección temporal agregada con éxito!');
+  } catch (error) {
+    console.error('Error al agregar dirección temporal:', error);
+    bot.sendMessage(chatId, 'Ocurrió un error al agregar la dirección temporal.');
+  }
+});
+
+// Comando para ver direcciones temporales
+bot.onText(/\/verDirecciones/, async (msg) => {
+  const chatId = msg.chat.id;
+  const session = userSessions[chatId];
+
+  if (!session) {
+    bot.sendMessage(chatId, 'Por favor, inicia sesión primero con el comando /login.');
+    return;
+  }
+
+  try {
+    // Obtener dirección principal
+    const direccionPrincipalResponse = await axios.get(
+      `http://${url_Backend}:8080/usuarios/obtenerusuario/${session.id}`,
+      {
+        headers: { 'Authorization': `Bearer ${session.token}` }
+      }
+    );
+
+    // Obtener direcciones temporales
+    const direccionesTemporalesResponse = await axios.get(
+      `http://${url_Backend}:8080/usuarios/${session.id}/direcciones`,
+      {
+        headers: { 'Authorization': `Bearer ${session.token}` }
+      }
+    );
+
+    const direccionPrincipal = direccionPrincipalResponse.data.direccion;
+    const direccionesTemporales = direccionesTemporalesResponse.data;
+
+    let mensaje = '*Tus direcciones:*\n\n';
+    mensaje += `📍 *Dirección Principal:*\n${direccionPrincipal}\n\n`;
+    
+    if (direccionesTemporales.length > 0) {
+      mensaje += '*Direcciones Temporales:*\n';
+      direccionesTemporales.forEach((dir, index) => {
+        mensaje += `${index + 1}. ${dir}\n`;
+      });
+
+      // Crear botones para eliminar direcciones
+      const buttons = direccionesTemporales.map((dir, index) => [{
+        text: `🗑️ Eliminar: ${dir}`,
+        callback_data: `eliminar_direccion_${dir}`
+      }]);
+
+      // Agregar botón para eliminar todas
+      if (direccionesTemporales.length > 1) {
+        buttons.push([{
+          text: '🗑️ Eliminar todas las direcciones temporales',
+          callback_data: 'eliminar_todas_direcciones'
+        }]);
+      }
+
+      bot.sendMessage(chatId, mensaje, {
+        parse_mode: 'Markdown',
+        reply_markup: {
+          inline_keyboard: buttons
+        }
+      });
+    } else {
+      mensaje += '*No tienes direcciones temporales registradas.*\n';
+      mensaje += 'Usa /agregarDireccion <dirección> para agregar una nueva.';
+      bot.sendMessage(chatId, mensaje, { parse_mode: 'Markdown' });
+    }
+  } catch (error) {
+    console.error('Error al obtener direcciones:', error);
+    bot.sendMessage(chatId, 'Ocurrió un error al obtener las direcciones.');
+  }
+});
+
 // Comando para mostrar la lista de comandos disponibles
 bot.onText(/\/comandos/, (msg) => {
   const chatId = msg.chat.id;
@@ -591,14 +808,21 @@ bot.onText(/\/comandos/, (msg) => {
 6. *\/historial-pedidos*  
    Muestra los pedidos que has realizado anteriormente.
 
-7. *\/comandos*  
+7. *\/agregarDireccion <dirección>*
+   Agrega una nueva dirección temporal.
+
+8. *\/verDirecciones*
+   Muestra todas tus direcciones y permite eliminarlas.
+
+9. *\/comandos*  
    Muestra esta lista de comandos.
 
-1. *\/historialVentas diario|semanal|mensual|anual*  
-   Comando si eres administrador.
+10. *\/historialVentas diario|semanal|mensual|anual*  
+    Comando si eres administrador.
 
 🛠 Si tienes dudas, no dudes en usar este comando nuevamente.
   `;
 
   bot.sendMessage(chatId, comandos, { parse_mode: 'Markdown' });
 });
+
