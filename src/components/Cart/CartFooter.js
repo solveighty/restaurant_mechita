@@ -3,6 +3,7 @@ import { useCart } from '@/context/CartContext'
 import { Trash2, Plus, Home } from 'lucide-react'
 import axios from 'axios'
 import { decodeJwt } from 'jose'
+import url_Backend from './config'
 
 export default function CartFooter({ onClose }) {
   const { cartItems, paymentMethod, setPaymentMethod, processPayment, calculateTotal } = useCart()
@@ -36,7 +37,7 @@ export default function CartFooter({ onClose }) {
 
       const token = localStorage.getItem('token')
       const response = await axios.get(
-        `http://localhost:8080/usuarios/obtenerusuario/${userId}`,
+        `http://${url_Backend}:8080/usuarios/obtenerusuario/${userId}`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -61,7 +62,7 @@ export default function CartFooter({ onClose }) {
       const userId = getUserId()
       const token = localStorage.getItem('token')
       const response = await axios.get(
-        `http://localhost:8080/usuarios/${userId}/direcciones`,
+        `http://${url_Backend}:8080/usuarios/${userId}/direcciones`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
@@ -82,7 +83,7 @@ export default function CartFooter({ onClose }) {
       const userId = getUserId()
       const token = localStorage.getItem('token')
       await axios.post(
-        `http://localhost:8080/usuarios/${userId}/direccion-temporal`,
+        `http://${url_Backend}:8080/usuarios/${userId}/direccion-temporal`,
         nuevaDireccion,
         {
           headers: {
@@ -106,7 +107,7 @@ export default function CartFooter({ onClose }) {
       const userId = getUserId()
       const token = localStorage.getItem('token')
       await axios.delete(
-        `http://localhost:8080/usuarios/${userId}/direccion-temporal`,
+        `http://${url_Backend}:8080/usuarios/${userId}/direccion-temporal`,
         {
           headers: { 'Authorization': `Bearer ${token}` },
           data: direccion
@@ -128,7 +129,7 @@ export default function CartFooter({ onClose }) {
       const userId = getUserId()
       const token = localStorage.getItem('token')
       await axios.delete(
-        `http://localhost:8080/usuarios/${userId}/direcciones-temporales`,
+        `http://${url_Backend}:8080/usuarios/${userId}/direcciones-temporales`,
         {
           headers: { 'Authorization': `Bearer ${token}` }
         }
