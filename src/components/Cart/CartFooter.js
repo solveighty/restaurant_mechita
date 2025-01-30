@@ -3,7 +3,7 @@ import { useCart } from '@/context/CartContext'
 import { Trash2, Plus, Home } from 'lucide-react'
 import axios from 'axios'
 import { decodeJwt } from 'jose'
-import url_Backend from './config'
+import url_Backend from '@/context/config'
 
 export default function CartFooter({ onClose }) {
   const { cartItems, paymentMethod, setPaymentMethod, processPayment, calculateTotal } = useCart()
