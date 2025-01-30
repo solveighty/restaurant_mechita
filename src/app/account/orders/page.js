@@ -31,7 +31,7 @@ const estadosColors = {
 export default function OrdersPage() {
   const [pedidos, setPedidos] = useState([])
   const [loading, setLoading] = useState(true)
-  const [filtroEstado, setFiltroEstado] = useState('TODOS')
+  const [filtroEstado, setFiltroEstado] = useState('EN_PROCESO')
   const [searchTerm, setSearchTerm] = useState('')
   const [userId, setUserId] = useState(null)
 

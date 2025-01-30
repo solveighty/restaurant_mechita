@@ -20,7 +20,7 @@ export default function OrderManagement() {
   const [orders, setOrders] = useState([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState('')
-  const [statusFilter, setStatusFilter] = useState('all')
+  const [statusFilter, setStatusFilter] = useState('EN_PROCESO')
   const [userId, setUserId] = useState(null)
   const [selectedOrder, setSelectedOrder] = useState(null)
 
