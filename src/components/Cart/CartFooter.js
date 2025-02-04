@@ -144,7 +144,6 @@ export default function CartFooter({ onClose }) {
 
   // Manejar cambio de dirección seleccionada
   const handleDireccionChange = (direccion) => {
-    console.log('Dirección seleccionada:', direccion)
     setDireccionSeleccionada(direccion)
   }
 

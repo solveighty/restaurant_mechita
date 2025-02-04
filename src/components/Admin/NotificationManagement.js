@@ -97,10 +97,18 @@ export default function NotificationManagement() {
     }
   }, [userId])
 
-  const filteredNotifications = notifications.filter(notif => {
-    if (filter === 'unread') return !notif.leida
-    return true
-  })
+  const filteredNotifications = notifications
+    .filter(notif => {
+      if (filter === 'unread') return !notif.leida
+      return true
+    })
+    // Asegurar que siempre se ordenen por fecha más reciente
+    .sort((a, b) => {
+      // Convertir las fechas a objetos Date para comparación
+      const dateA = new Date(a.fecha.replace(/de/g, '').replace(/,/g, ''))
+      const dateB = new Date(b.fecha.replace(/de/g, '').replace(/,/g, ''))
+      return dateB - dateA
+    })
 
   if (loading) {
     return (
@@ -111,76 +119,111 @@ export default function NotificationManagement() {
   }
 
   return (
-    <div className="space-y-6">
-      {/* Filtros */}
-      <div className="flex flex-wrap gap-4">
-        <button
-          onClick={() => setFilter('all')}
-          className={`
-            inline-flex items-center gap-2 px-4 py-2 rounded-lg
-            ${filter === 'all' 
-              ? 'bg-orange-500 text-white' 
-              : 'bg-white text-gray-600 hover:bg-gray-50'
-            }
-          `}
-        >
-          <Bell className="w-5 h-5" />
-          Todas
-        </button>
-        <button
-          onClick={() => setFilter('unread')}
-          className={`
-            inline-flex items-center gap-2 px-4 py-2 rounded-lg
-            ${filter === 'unread' 
-              ? 'bg-orange-500 text-white' 
-              : 'bg-white text-gray-600 hover:bg-gray-50'
-            }
-          `}
-        >
-          Sin leer
-        </button>
+    <div className="max-w-4xl mx-auto space-y-6">
+      {/* Encabezado */}
+      <div className="flex items-center justify-between">
+        <h2 className="text-2xl font-semibold text-gray-900">
+          Notificaciones
+        </h2>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setFilter('all')}
+            className={`
+              inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+              transition-colors duration-200
+              ${filter === 'all' 
+                ? 'bg-orange-500 text-white shadow-sm' 
+                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+              }
+            `}
+          >
+            <Bell className="w-4 h-4" />
+            Todas
+          </button>
+          <button
+            onClick={() => setFilter('unread')}
+            className={`
+              inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium
+              transition-colors duration-200
+              ${filter === 'unread' 
+                ? 'bg-orange-500 text-white shadow-sm' 
+                : 'bg-white text-gray-600 hover:bg-gray-50 border border-gray-200'
+              }
+            `}
+          >
+            <Filter className="w-4 h-4" />
+            Sin leer
+          </button>
+        </div>
       </div>
 
       {/* Lista de notificaciones */}
       <div className="space-y-4">
         {filteredNotifications.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            No hay notificaciones
+          <div className="text-center py-12">
+            <Bell className="mx-auto h-12 w-12 text-gray-400" />
+            <h3 className="mt-2 text-sm font-medium text-gray-900">No hay notificaciones</h3>
+            <p className="mt-1 text-sm text-gray-500">
+              {filter === 'unread' 
+                ? 'No tienes notificaciones sin leer en este momento.'
+                : 'No hay notificaciones para mostrar.'}
+            </p>
           </div>
         ) : (
           filteredNotifications.map((notification) => (
             <div 
               key={notification.id} 
-              className="bg-white rounded-lg shadow p-4"
+              className={`
+                relative bg-white rounded-lg shadow-sm border
+                transition-all duration-200
+                ${notification.leida 
+                  ? 'border-gray-100' 
+                  : 'border-orange-100 bg-orange-50'
+                }
+              `}
             >
-              <div className="flex items-start gap-4">
-                <div className="flex-shrink-0">
-                  <Bell className={`w-6 h-6 ${
-                    notification.leida ? 'text-gray-400' : 'text-orange-500'
-                  }`} />
-                </div>
-                <div className="flex-1">
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <p className={`text-sm ${
-                        notification.leida ? 'text-gray-500' : 'text-gray-900'
-                      }`}>
-                        {notification.mensaje}
-                      </p>
-                      <p className="mt-1 text-xs text-gray-400">
-                        {notification.fecha}
-                      </p>
+              <div className="p-4 sm:p-6">
+                <div className="flex items-start gap-4">
+                  <div className="flex-shrink-0">
+                    <div className={`
+                      p-2 rounded-full
+                      ${notification.leida 
+                        ? 'bg-gray-100' 
+                        : 'bg-orange-100'
+                      }
+                    `}>
+                      <Bell className={`w-5 h-5 ${
+                        notification.leida ? 'text-gray-500' : 'text-orange-500'
+                      }`} />
                     </div>
-                    {!notification.leida && (
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm ${
+                      notification.leida ? 'text-gray-600' : 'text-gray-900'
+                    }`}>
+                      {notification.mensaje}
+                    </p>
+                    <p className="mt-1 text-xs text-gray-500">
+                      {notification.fecha}
+                    </p>
+                  </div>
+                  {!notification.leida && (
+                    <div className="flex-shrink-0">
                       <button
                         onClick={() => markAsRead(notification.id)}
-                        className="p-1 text-gray-400 hover:text-green-500 hover:bg-green-50 rounded-full"
+                        className="
+                          inline-flex items-center gap-1 px-3 py-1.5 
+                          rounded-full text-sm font-medium
+                          text-green-600 bg-green-50 hover:bg-green-100
+                          transition-colors duration-200
+                        "
                         title="Marcar como leída"
                       >
-                        <Check className="w-5 h-5" />
+                        <Check className="w-4 h-4" />
+                        Marcar leída
                       </button>
-                    )}
-                  </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>

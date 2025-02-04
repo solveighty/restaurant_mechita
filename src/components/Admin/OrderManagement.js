@@ -8,7 +8,9 @@ import {
   XCircle,
   Package,
   Truck,
-  Check
+  Check,
+  ChevronLeft,
+  ChevronRight
 } from 'lucide-react'
 import axios from 'axios'
 import url_Backend from '@/context/config'
@@ -23,6 +25,9 @@ export default function OrderManagement() {
   const [statusFilter, setStatusFilter] = useState('EN_PROCESO')
   const [userId, setUserId] = useState(null)
   const [selectedOrder, setSelectedOrder] = useState(null)
+  const [reviews, setReviews] = useState({})
+  const [currentPage, setCurrentPage] = useState(1)
+  const [ordersPerPage] = useState(10)
 
   const estadoOptions = [
     { label: 'En Proceso', value: 'EN_PROCESO', icon: Clock },
@@ -61,6 +66,36 @@ export default function OrderManagement() {
     }
   }
 
+  const fetchReviews = async () => {
+    if (!userId) return
+
+    try {
+      const token = localStorage.getItem('token')
+      const response = await axios.get(
+        `http://${url_Backend}:8080/resenas/pedidos?adminId=${userId}`,
+        {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        }
+      )
+      
+      const reviewsMap = {}
+      response.data.forEach(review => {
+        // Usar historialCompra.id para mapear la reseña al pedido
+        reviewsMap[review.historialCompra?.id] = {
+          rating: review.calificacion,
+          comentario: review.comentario,
+          fecha: review.fecha
+        }
+      })
+      setReviews(reviewsMap)
+    } catch (error) {
+      console.error('Error al obtener reseñas:', error)
+      toast.error('Error al cargar las reseñas')
+    }
+  }
+
   const handleStatusChange = async (orderId, newStatus) => {
     if (!userId) return
 
@@ -96,15 +131,24 @@ export default function OrderManagement() {
   useEffect(() => {
     if (userId) {
       fetchOrders()
+      fetchReviews()
     }
   }, [userId])
 
-  const filteredOrders = orders.filter(order => {
-    const matchesSearch = order.id.toString().includes(searchTerm) ||
-                         order.usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase())
-    const matchesStatus = statusFilter === 'all' || order.estadoCompra === statusFilter
-    return matchesSearch && matchesStatus
-  })
+  // Ordenar pedidos por fecha más reciente y aplicar filtros
+  const filteredOrders = orders
+    .sort((a, b) => {
+      // Convertir las fechas a objetos Date para comparación
+      const dateA = new Date(a.fechaCompra)
+      const dateB = new Date(b.fechaCompra)
+      return dateB - dateA // Orden descendente (más reciente primero)
+    })
+    .filter(order => {
+      const matchesSearch = order.id.toString().includes(searchTerm) ||
+                          order.usuario.nombre.toLowerCase().includes(searchTerm.toLowerCase())
+      const matchesStatus = statusFilter === 'all' || order.estadoCompra === statusFilter
+      return matchesSearch && matchesStatus
+    })
 
   if (loading) {
     return (
@@ -122,6 +166,13 @@ export default function OrderManagement() {
       default: return 'text-gray-600 bg-gray-100'
     }
   }
+
+  const indexOfLastOrder = currentPage * ordersPerPage
+  const indexOfFirstOrder = indexOfLastOrder - ordersPerPage
+  const currentOrders = filteredOrders.slice(indexOfFirstOrder, indexOfLastOrder)
+  const totalPages = Math.ceil(filteredOrders.length / ordersPerPage)
+
+  const paginate = (pageNumber) => setCurrentPage(pageNumber)
 
   return (
     <div className="space-y-6">
@@ -190,7 +241,7 @@ export default function OrderManagement() {
             </tr>
           </thead>
           <tbody className="divide-y divide-gray-200">
-            {filteredOrders.map(order => {
+            {currentOrders.map(order => {
               const total = order.detalles.reduce((sum, item) => sum + item.precio, 0)
               return (
                 <tr key={order.id}>
@@ -230,7 +281,9 @@ export default function OrderManagement() {
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap">
                     <button
-                      onClick={() => setSelectedOrder(order)}
+                      onClick={() => {
+                        setSelectedOrder(order);
+                      }}
                       className="text-blue-600 hover:text-blue-800 text-sm font-medium"
                     >
                       Ver detalles
@@ -245,11 +298,126 @@ export default function OrderManagement() {
 
       {/* Modal de detalles */}
       {selectedOrder && (
-        <OrderDetailModal
-          order={selectedOrder}
-          onClose={() => setSelectedOrder(null)}
-        />
+        <>
+          <OrderDetailModal
+            order={selectedOrder}
+            review={reviews[selectedOrder.id]}
+            onClose={() => setSelectedOrder(null)}
+          />
+        </>
       )}
+
+      {/* Paginación mejorada */}
+      <div className="mt-6 flex items-center justify-between bg-white px-4 py-3 sm:px-6 rounded-lg shadow">
+        {/* Versión móvil */}
+        <div className="flex flex-1 justify-between sm:hidden">
+          <button
+            onClick={() => paginate(currentPage - 1)}
+            disabled={currentPage === 1}
+            className={`relative inline-flex items-center rounded-md px-4 py-2 text-sm font-medium
+              ${currentPage === 1 
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-orange-600 hover:bg-orange-50 border border-orange-300'}`}
+          >
+            <ChevronLeft className="h-5 w-5 mr-1" />
+            Anterior
+          </button>
+          <button
+            onClick={() => paginate(currentPage + 1)}
+            disabled={currentPage === totalPages}
+            className={`relative inline-flex items-center rounded-md px-4 py-2 text-sm font-medium
+              ${currentPage === totalPages
+                ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                : 'bg-white text-orange-600 hover:bg-orange-50 border border-orange-300'}`}
+          >
+            Siguiente
+            <ChevronRight className="h-5 w-5 ml-1" />
+          </button>
+        </div>
+
+        {/* Versión desktop */}
+        <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
+          <div>
+            <p className="text-sm text-gray-700">
+              Mostrando{' '}
+              <span className="font-medium text-orange-600">{indexOfFirstOrder + 1}</span>
+              {' '}-{' '}
+              <span className="font-medium text-orange-600">
+                {Math.min(indexOfLastOrder, filteredOrders.length)}
+              </span>
+              {' '}de{' '}
+              <span className="font-medium text-orange-600">{filteredOrders.length}</span>
+              {' '}resultados
+            </p>
+          </div>
+          <div>
+            <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm" aria-label="Pagination">
+              <button
+                onClick={() => paginate(currentPage - 1)}
+                disabled={currentPage === 1}
+                className={`relative inline-flex items-center rounded-l-lg px-3 py-2 text-sm font-medium
+                  ${currentPage === 1
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-500 hover:bg-orange-50 hover:text-orange-600 border border-gray-300'}`}
+              >
+                <span className="sr-only">Anterior</span>
+                <ChevronLeft className="h-5 w-5" />
+              </button>
+
+              {/* Números de página con mejor diseño */}
+              {[...Array(totalPages)].map((_, index) => {
+                const pageNumber = index + 1;
+                // Mostrar siempre primera página, última página, página actual y una página antes y después
+                if (
+                  pageNumber === 1 ||
+                  pageNumber === totalPages ||
+                  (pageNumber >= currentPage - 1 && pageNumber <= currentPage + 1)
+                ) {
+                  return (
+                    <button
+                      key={pageNumber}
+                      onClick={() => paginate(pageNumber)}
+                      className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold
+                        ${currentPage === pageNumber
+                          ? 'z-10 bg-orange-600 text-white focus-visible:outline-orange-600'
+                          : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-orange-50'
+                        } ${pageNumber === 1 ? '' : '-ml-px'}`}
+                    >
+                      {pageNumber}
+                    </button>
+                  );
+                } else if (
+                  pageNumber === currentPage - 2 ||
+                  pageNumber === currentPage + 2
+                ) {
+                  // Mostrar puntos suspensivos
+                  return (
+                    <span
+                      key={pageNumber}
+                      className="relative inline-flex items-center px-4 py-2 text-sm font-semibold text-gray-700 ring-1 ring-inset ring-gray-300 focus:outline-offset-0"
+                    >
+                      ...
+                    </span>
+                  );
+                }
+                return null;
+              })}
+
+              <button
+                onClick={() => paginate(currentPage + 1)}
+                disabled={currentPage === totalPages}
+                className={`relative inline-flex items-center rounded-r-lg px-3 py-2 text-sm font-medium
+                  ${currentPage === totalPages
+                    ? 'bg-gray-100 text-gray-400 cursor-not-allowed'
+                    : 'bg-white text-gray-500 hover:bg-orange-50 hover:text-orange-600 border border-gray-300'}`}
+              >
+                <span className="sr-only">Siguiente</span>
+                <ChevronRight className="h-5 w-5" />
+              </button>
+            </nav>
+          </div>
+        </div>
+      </div>
     </div>
   )
 } 
