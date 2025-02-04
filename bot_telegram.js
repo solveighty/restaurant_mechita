@@ -20,7 +20,7 @@ bot.onText(/\/login (.+)/, async (msg, match) => {
   const credentials = match[1].split(' ');
 
   if (credentials.length !== 2) {
-    bot.sendMessage(chatId, 'Formato incorrecto. Usa: /login <usuario> <contraseña>');
+    bot.sendMessage(chatId, 'Formato incorrecto. Debes usar: /login <usuario> <contraseña>');
     return;
   }
 
