@@ -236,7 +236,7 @@ bot.onText(/\/carrito/, async (msg) => {
   }
 });
 
-// Actualizar el manejador de callback para separar la lógica de direcciones y carrito
+// Actualizar el manejador de callback para incluir la selección de menú
 bot.on('callback_query', async (query) => {
   const chatId = query.message.chat.id;
   const session = userSessions[chatId];
@@ -248,7 +248,35 @@ bot.on('callback_query', async (query) => {
     return;
   }
 
-  if (action === 'eliminar' && data[1] === 'direccion') {
+  if (action === 'select') {
+    const menuId = data[1];
+    try {
+      // Obtener el nombre del platillo seleccionado
+      const response = await axios.get(`http://${url_Backend}:8080/menu`, {
+        headers: {
+          'Authorization': `Bearer ${session.token}`,
+          'Content-Type': 'application/json'
+        }
+      });
+      
+      const menuItem = response.data.find(item => item.id.toString() === menuId);
+      if (!menuItem) {
+        throw new Error('Platillo no encontrado');
+      }
+
+      // Guardar la selección pendiente
+      pendingSelections[chatId] = {
+        menuId: menuId,
+        menuName: menuItem.nombre
+      };
+
+      // Pedir la cantidad al usuario
+      bot.sendMessage(chatId, `Has seleccionado: ${menuItem.nombre}\nPor favor, indica la cantidad que deseas (escribe solo el número):`);
+    } catch (error) {
+      console.error('Error al seleccionar platillo:', error);
+      bot.sendMessage(chatId, 'Ocurrió un error al seleccionar el platillo. Por favor, intenta nuevamente.');
+    }
+  } else if (action === 'eliminar' && data[1] === 'direccion') {
     const direccion = data.slice(2).join('_');
     try {
       console.log('Intentando eliminar dirección:', direccion);
