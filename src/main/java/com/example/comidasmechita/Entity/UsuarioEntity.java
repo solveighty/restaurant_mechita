@@ -21,7 +21,6 @@ public class UsuarioEntity {
     private Long id;
     private String usuario;
     private String nombre;
-    @JsonIgnore
     private String contrasena;
     private String telefono;
     @Email(message = "El correo electrónico debe tener un formato válido")

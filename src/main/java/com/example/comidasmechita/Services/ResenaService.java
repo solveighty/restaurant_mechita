@@ -52,6 +52,13 @@ public class ResenaService {
         return resenaRepository.save(resena);
     }
 
+    @Transactional(readOnly = true)
+    public List<ResenaEntity> obtenerResenasPorUsuario(Long usuarioId) {
+        UsuarioEntity usuario = usuarioRepository.findById(usuarioId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+
+        return resenaRepository.findByUsuario(usuario);
+    }
 
     @Transactional(readOnly = true)
     public List<ResenaEntity> obtenerResenasPagina() {

@@ -45,6 +45,12 @@ public class ResenaController {
         return ResponseEntity.ok(resenaService.obtenerResenasPedidos());
     }
 
+    @GetMapping("/usuario/{usuarioId}")
+    public ResponseEntity<List<ResenaEntity>> obtenerResenasPorUsuario(@PathVariable Long usuarioId) {
+        List<ResenaEntity> resenas = resenaService.obtenerResenasPorUsuario(usuarioId);
+        return ResponseEntity.ok(resenas);
+    }
+
     private boolean esAdmin(Long usuarioId) {
         return usuarioRepository.findById(usuarioId)
                 .map(usuario -> usuario.getRol() == UsuarioEntity.Rol.ADMIN)

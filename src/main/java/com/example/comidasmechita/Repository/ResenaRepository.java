@@ -10,4 +10,5 @@ import java.util.List;
 public interface ResenaRepository extends JpaRepository<ResenaEntity, Long> {
     List<ResenaEntity> findByTipoResena(ResenaEntity.TipoResena tipoResena);
     long countByUsuarioAndTipoResena(UsuarioEntity usuario, ResenaEntity.TipoResena tipoResena);
+    List<ResenaEntity> findByUsuario(UsuarioEntity usuario);
 }
