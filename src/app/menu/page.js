@@ -90,7 +90,12 @@ export default function MenuDisplay() {
           }
         })
 
-        setMenuItems(response.data)
+        const menusWithCorrectImageUrls = response.data.map(menu => ({
+          ...menu,
+          imagen: menu.imagen.replace(':8080', ':81')
+        }))
+
+        setMenuItems(menusWithCorrectImageUrls)
         setLoading(false)
       } catch (error) {
         console.error('Error al obtener el menú:', error)
