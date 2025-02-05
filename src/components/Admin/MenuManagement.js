@@ -156,34 +156,36 @@ export default function MenuManagement() {
       </div>
 
       {/* Lista de menús */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {menus.map((menu) => (
-          <div key={menu.id} className="bg-white rounded-lg shadow p-4">
-            <div className="aspect-w-16 aspect-h-9 mb-4">
+          <div key={menu.id} className="bg-white rounded-lg shadow overflow-hidden">
+            <div className="relative h-64">
               <img
                 src={menu.imagen || '/placeholder-image.jpg'}
                 alt={menu.nombre}
-                className="object-cover rounded-lg"
+                className="absolute w-full h-full object-cover"
               />
             </div>
-            <h3 className="font-semibold text-gray-900">{menu.nombre}</h3>
-            <p className="text-sm text-gray-500 mt-1">{menu.descripcion}</p>
-            <p className="text-lg font-medium text-gray-900 mt-2">
-              ${menu.precio.toFixed(2)}
-            </p>
-            <div className="flex justify-end gap-2 mt-4">
-              <button
-                onClick={() => handleEdit(menu)}
-                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
-              >
-                <Pencil className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => handleDelete(menu.id)}
-                className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
-              >
-                <Trash2 className="w-5 h-5" />
-              </button>
+            <div className="p-6">
+              <h3 className="font-semibold text-gray-900">{menu.nombre}</h3>
+              <p className="text-sm text-gray-500 mt-1">{menu.descripcion}</p>
+              <p className="text-lg font-medium text-gray-900 mt-2">
+                ${menu.precio.toFixed(2)}
+              </p>
+              <div className="flex justify-end gap-2 mt-4">
+                <button
+                  onClick={() => handleEdit(menu)}
+                  className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg"
+                >
+                  <Pencil className="w-5 h-5" />
+                </button>
+                <button
+                  onClick={() => handleDelete(menu.id)}
+                  className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                >
+                  <Trash2 className="w-5 h-5" />
+                </button>
+              </div>
             </div>
           </div>
         ))}
