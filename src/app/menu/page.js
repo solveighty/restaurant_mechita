@@ -92,7 +92,9 @@ export default function MenuDisplay() {
 
         const menusWithCorrectImageUrls = response.data.map(menu => ({
           ...menu,
-          imagen: menu.imagen.replace(':8080', ':81')
+          imagen: menu.imagen.startsWith('http') 
+            ? menu.imagen 
+            : `http://${url_Backend}:81/${menu.imagen}`
         }))
 
         setMenuItems(menusWithCorrectImageUrls)
@@ -261,13 +263,11 @@ export default function MenuDisplay() {
                   onClick={() => handleItemClick(item)}
                 >
                   <div className="relative h-48 sm:h-56 lg:h-64">
-                    <Image 
+                    <img 
                       src={item.imagen}
                       alt={item.nombre}
-                      fill
-                      className="object-fill"
-                      sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
-                      priority={true}
+                      className="w-full h-full object-cover"
+                      loading="lazy"
                     />
                   </div>
                   <div className="p-4 sm:p-6">
