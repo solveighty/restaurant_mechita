@@ -1,12 +1,17 @@
-const { Client } = require('whatsapp-web.js');
+const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const axios = require('axios');
 
 
 const url_Backend = 'localhost';
 
-// Crear el cliente de WhatsApp
-const client = new Client();
+// Crear el cliente de WhatsApp con opciones específicas
+const client = new Client({
+    puppeteer: {
+        args: ['--no-sandbox', '--disable-setuid-sandbox']
+    },
+    authStrategy: new LocalAuth()
+});
 
 // Estado para almacenar datos de sesión temporal
 const userSessions = {};
