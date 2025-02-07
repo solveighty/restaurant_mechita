@@ -672,8 +672,15 @@ client.on('message', async msg => {
 10. *\/historialVentas diario|semanal|mensual|anual*  
     Comando exclusivo para administradores.
 
+11. *\/chat*
+    Inicia un chat con el administrador.
+
+12. *\/endchat*
+    Finaliza el chat con el administrador.
+
 🛠 Si tienes dudas, no dudes en usar este comando nuevamente.
 `;
+
         client.sendMessage(chatId, comandos);
     }
 
