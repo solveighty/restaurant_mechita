@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { Send, Phone, MessageSquare } from 'lucide-react'
 import { motion } from 'framer-motion'
 import * as jose from 'jose'
+import url_Backend from '@/context/config'
 
 export default function ChatManagement() {
   const [conversations, setConversations] = useState([])
@@ -32,7 +33,7 @@ export default function ChatManagement() {
     // Solo conectar al WebSocket si tenemos el adminId
     if (!adminId) return
 
-    wsRef.current = new WebSocket('ws://localhost:8081')
+    wsRef.current = new WebSocket(`ws://${url_Backend}:8081`)
 
     wsRef.current.onopen = () => {
       wsRef.current.send(JSON.stringify({
