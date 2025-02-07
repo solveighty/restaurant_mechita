@@ -7,6 +7,7 @@ import {
   Bell, 
   ClipboardList, 
   UtensilsCrossed,
+  MessageSquare,
   LogOut 
 } from 'lucide-react'
 import Link from 'next/link'
@@ -23,6 +24,7 @@ export default function AdminLayout({ children }) {
     { name: 'Notificaciones', href: '/admin/notifications', icon: Bell },
     { name: 'Pedidos', href: '/admin/orders', icon: ClipboardList },
     { name: 'Menús', href: '/admin/menus', icon: UtensilsCrossed },
+    { name: 'Chat', href: '/admin/chat', icon: MessageSquare },
   ]
 
   const handleExit = () => {
