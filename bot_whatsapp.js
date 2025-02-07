@@ -1,6 +1,7 @@
 const { Client, LocalAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const axios = require('axios');
+const WebSocket = require('ws');
 
 
 const url_Backend = 'localhost';
@@ -16,6 +17,11 @@ const client = new Client({
 // Estado para almacenar datos de sesión temporal
 const userSessions = {};
 const pendingSelections = {};
+const activeChats = new Map(); // Mantiene formato: chatId -> { userId, username, messages: [] }
+
+// Crear servidor WebSocket
+const wss = new WebSocket.Server({ port: 8081 });
+const adminConnections = new Map(); // Para mantener las conexiones de administradores
 
 // Evento cuando el cliente está listo
 client.on('ready', () => {
@@ -34,7 +40,6 @@ client.on('message', async msg => {
 
     // Verificar si el mensaje viene de un grupo y si es un comando
     if (msg.from.includes('g.us') && messageBody.startsWith('/')) {
-        client.sendMessage(chatId, 'Este bot solo funciona en chats privados. Por favor, escríbeme directamente.');
         return;
     }
 
@@ -671,6 +676,95 @@ client.on('message', async msg => {
 `;
         client.sendMessage(chatId, comandos);
     }
+
+    // Comando chat
+    if (messageBody === '/chat') {
+        const session = userSessions[chatId];
+        if (!session) {
+            client.sendMessage(chatId, 'Por favor, inicia sesión primero con el comando /login.');
+            return;
+        }
+
+        // Verificar si este chatId específico ya tiene un chat activo
+        if (activeChats.has(chatId)) {
+            client.sendMessage(chatId, 'Ya tienes un chat activo. Usa /endchat para finalizar el chat actual antes de iniciar uno nuevo.');
+            return;
+        }
+
+        session.chatActive = true;
+        activeChats.set(chatId, {
+            userId: session.userId,
+            username: session.username,
+            messages: []
+        });
+
+        client.sendMessage(chatId, 'Has iniciado un chat con el administrador. Todos tus mensajes serán enviados al administrador. Usa /endchat para finalizar.');
+        
+        // Notificar a todos los admins conectados
+        for (const [, ws] of adminConnections) {
+            ws.send(JSON.stringify({
+                type: 'new_chat',
+                userId: chatId,
+                username: session.username,
+                message: 'Usuario ha iniciado un chat',
+                actualUserId: session.userId
+            }));
+        }
+        return;
+    }
+
+    // Comando endchat
+    else if (messageBody === '/endchat') {
+        const session = userSessions[chatId];
+        if (!session || !activeChats.has(chatId)) {
+            client.sendMessage(chatId, 'No tienes un chat activo para finalizar.');
+            return;
+        }
+
+        session.chatActive = false;
+        const chatData = activeChats.get(chatId);
+        
+        // Notificar a los admins
+        for (const [, ws] of adminConnections) {
+            ws.send(JSON.stringify({
+                type: 'end_chat',
+                userId: chatId,
+                username: session.username,
+                actualUserId: session.userId
+            }));
+        }
+        
+        // Eliminar el chat
+        activeChats.delete(chatId);
+        client.sendMessage(chatId, 'Has finalizado el chat con el administrador.');
+        return;
+    }
+
+    // Manejo de mensajes de chat
+    const session = userSessions[chatId];
+    if (session && session.chatActive && !messageBody.startsWith('/')) {
+        const chatData = activeChats.get(chatId);
+        if (chatData) {
+            // Guardar el mensaje en el historial del chat
+            chatData.messages.push({
+                sender: 'user',
+                message: messageBody,
+                timestamp: new Date().toISOString()
+            });
+
+            // Enviar mensaje solo a los admins
+            for (const [, ws] of adminConnections) {
+                ws.send(JSON.stringify({
+                    type: 'chat_message',
+                    userId: chatId,
+                    username: session.username,
+                    message: messageBody,
+                    actualUserId: session.userId
+                }));
+            }
+        }
+        return;
+    }
 });
 
 // Función auxiliar para calcular el total
@@ -719,6 +813,59 @@ const checkNotifications = async () => {
 
 // Configurar el polling de notificaciones cada 10 segundos
 setInterval(checkNotifications, 10000);
+
+// Manejar conexiones WebSocket
+wss.on('connection', (ws) => {
+    ws.on('message', (message) => {
+        try {
+            const data = JSON.parse(message);
+            
+            if (data.type === 'admin_register') {
+                adminConnections.set(data.adminId, ws);
+                ws.adminId = data.adminId;
+                
+                // Enviar lista de chats activos al nuevo admin
+                const activeChatsArray = Array.from(activeChats.entries()).map(([chatId, chatData]) => ({
+                    userId: chatId,
+                    username: chatData.username,
+                    actualUserId: chatData.userId,
+                    messages: chatData.messages // Incluir historial de mensajes
+                }));
+                
+                ws.send(JSON.stringify({
+                    type: 'active_chats',
+                    chats: activeChatsArray
+                }));
+                return;
+            }
+            
+            // Modificar el manejo de mensajes del admin
+            if (data.type === 'chat_message') {
+                const { userId, message: textMessage } = data;
+                const chatData = activeChats.get(userId);
+                
+                if (userSessions[userId] && chatData) {
+                    // Guardar mensaje del admin en el historial
+                    chatData.messages.push({
+                        sender: 'admin',
+                        message: textMessage,
+                        timestamp: new Date().toISOString()
+                    });
+                    
+                    client.sendMessage(userId, `Admin: ${textMessage}`);
+                }
+            }
+        } catch (error) {
+            console.error('Error processing WebSocket message:', error);
+        }
+    });
+
+    ws.on('close', () => {
+        if (ws.adminId) {
+            adminConnections.delete(ws.adminId);
+        }
+    });
+});
 
 // Inicializar el cliente
 client.initialize();
