@@ -1,6 +1,7 @@
 const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
 const axios = require('axios');
+const WebSocket = require('ws');
 
 // Token del bot de Telegram
 const token = process.env.BOT_TOKEN;
@@ -13,6 +14,11 @@ const bot = new TelegramBot(token, { polling: true });
 // Estado para almacenar datos de sesión temporal
 const userSessions = {};
 const pendingSelections = {};
+
+// Crear servidor WebSocket
+const wss = new WebSocket.Server({ port: 8082 }); // Puerto diferente al de WhatsApp
+const adminConnections = new Map(); // Para mantener las conexiones de administradores
+const activeChats = new Map(); // Mantiene formato: chatId -> { userId, username, messages: [] }
 
 // Comando para loguearse
 bot.onText(/\/login (.+)/, async (msg, match) => {
@@ -852,5 +858,156 @@ bot.onText(/\/comandos/, (msg) => {
   `;
 
   bot.sendMessage(chatId, comandos, { parse_mode: 'Markdown' });
+});
+
+// Agregar los nuevos comandos de chat
+bot.onText(/\/chat/, async (msg) => {
+  const chatId = msg.chat.id;
+  const session = userSessions[chatId];
+
+  if (!session) {
+    bot.sendMessage(chatId, 'Por favor, inicia sesión primero con el comando /login.');
+    return;
+  }
+
+  // Verificar si ya tiene un chat activo
+  if (activeChats.has(chatId)) {
+    bot.sendMessage(chatId, 'Ya tienes un chat activo. Usa /endchat para finalizar el chat actual antes de iniciar uno nuevo.');
+    return;
+  }
+
+  session.chatActive = true;
+  activeChats.set(chatId, {
+    userId: session.id,
+    username: session.username,
+    messages: []
+  });
+
+  bot.sendMessage(chatId, 'Has iniciado un chat con el administrador. Todos tus mensajes serán enviados al administrador. Usa /endchat para finalizar.');
+  
+  // Notificar a todos los admins conectados
+  for (const [, ws] of adminConnections) {
+    ws.send(JSON.stringify({
+      type: 'new_chat',
+      userId: chatId,
+      username: session.username,
+      message: 'Usuario ha iniciado un chat',
+      actualUserId: session.id,
+      platform: 'telegram'
+    }));
+  }
+});
+
+bot.onText(/\/endchat/, (msg) => {
+  const chatId = msg.chat.id;
+  const session = userSessions[chatId];
+
+  if (!session || !activeChats.has(chatId)) {
+    bot.sendMessage(chatId, 'No tienes un chat activo para finalizar.');
+    return;
+  }
+
+  session.chatActive = false;
+  
+  // Notificar a los admins
+  for (const [, ws] of adminConnections) {
+    ws.send(JSON.stringify({
+      type: 'end_chat',
+      userId: chatId,
+      username: session.username,
+      actualUserId: session.id,
+      platform: 'telegram'
+    }));
+  }
+  
+  activeChats.delete(chatId);
+  bot.sendMessage(chatId, 'Has finalizado el chat con el administrador.');
+});
+
+// Modificar el manejador de mensajes existente para incluir el chat
+bot.on('message', async (msg) => {
+  const chatId = msg.chat.id;
+  const session = userSessions[chatId];
+  
+  // Si hay un chat activo y no es un comando
+  if (session?.chatActive && !msg.text?.startsWith('/')) {
+    const chatData = activeChats.get(chatId);
+    if (chatData) {
+      // Guardar el mensaje en el historial
+      chatData.messages.push({
+        sender: 'user',
+        message: msg.text,
+        timestamp: new Date().toISOString()
+      });
+
+      // Enviar mensaje a los admins
+      for (const [, ws] of adminConnections) {
+        ws.send(JSON.stringify({
+          type: 'chat_message',
+          userId: chatId,
+          username: session.username,
+          message: msg.text,
+          actualUserId: session.id,
+          platform: 'telegram'
+        }));
+      }
+    }
+    return;
+  }
+  
+  // ... resto del código existente de manejo de mensajes ...
+});
+
+// Agregar el manejo de conexiones WebSocket
+wss.on('connection', (ws) => {
+  ws.on('message', (message) => {
+    try {
+      const data = JSON.parse(message);
+      
+      if (data.type === 'admin_register') {
+        adminConnections.set(data.adminId, ws);
+        ws.adminId = data.adminId;
+        
+        // Enviar lista de chats activos al nuevo admin
+        const activeChatsArray = Array.from(activeChats.entries()).map(([chatId, chatData]) => ({
+          userId: chatId,
+          username: chatData.username,
+          actualUserId: chatData.userId,
+          messages: chatData.messages,
+          platform: 'telegram'
+        }));
+        
+        ws.send(JSON.stringify({
+          type: 'active_chats',
+          chats: activeChatsArray
+        }));
+        return;
+      }
+      
+      if (data.type === 'chat_message') {
+        const { userId, message: textMessage } = data;
+        const chatData = activeChats.get(userId);
+        
+        if (userSessions[userId] && chatData) {
+          // Guardar mensaje del admin
+          chatData.messages.push({
+            sender: 'admin',
+            message: textMessage,
+            timestamp: new Date().toISOString()
+          });
+          
+          bot.sendMessage(userId, `Admin: ${textMessage}`);
+        }
+      }
+    } catch (error) {
+      console.error('Error processing WebSocket message:', error);
+    }
+  });
+
+  ws.on('close', () => {
+    if (ws.adminId) {
+      adminConnections.delete(ws.adminId);
+    }
+  });
 });
 
