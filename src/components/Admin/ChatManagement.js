@@ -30,51 +30,55 @@ export default function ChatManagement() {
   }, [])
 
   useEffect(() => {
-    // Solo conectar al WebSocket si tenemos el adminId
-    if (!adminId) return
+    if (!adminId) return;
 
-    wsRef.current = new WebSocket(`ws://${url_Backend}:8081`)
-
-    wsRef.current.onopen = () => {
-      wsRef.current.send(JSON.stringify({
-        type: 'admin_register',
-        adminId: adminId
-      }))
-    }
-
-    wsRef.current.onmessage = (event) => {
-      const data = JSON.parse(event.data)
+    // Conectar a ambos WebSockets
+    const wsWhatsapp = new WebSocket(`ws://${url_Backend}:8081`);
+    const wsTelegram = new WebSocket(`ws://${url_Backend}:8082`);
+    
+    const handleWebSocketMessage = (event, platform) => {
+      const data = JSON.parse(event.data);
       
       switch (data.type) {
         case 'active_chats':
-          // Manejar los chats activos y sus mensajes
-          const newMessagesByChat = {}
-          data.chats.forEach(chat => {
-            newMessagesByChat[chat.userId] = chat.messages.map(msg => ({
-              id: msg.timestamp,
-              text: msg.message,
-              sender: msg.sender,
-              timestamp: new Date(msg.timestamp).toLocaleTimeString([], { 
-                hour: '2-digit', 
-                minute: '2-digit' 
-              })
-            }))
-          })
-          setMessagesByChat(newMessagesByChat)
-          setConversations(data.chats.map(chat => ({
-            id: chat.userId,
-            name: chat.username,
-            lastMessage: chat.messages[chat.messages.length - 1]?.message || 'Inicio de chat',
-            unread: 0,
-            platform: "whatsapp",
-            timestamp: new Date().toLocaleTimeString([], { 
-              hour: '2-digit', 
-              minute: '2-digit' 
-            }),
-            avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.username}`,
-            actualUserId: chat.actualUserId
-          })))
-          break
+          // Agregar la plataforma a cada chat
+          const chatsWithPlatform = data.chats.map(chat => ({
+            ...chat,
+            platform: platform
+          }));
+          
+          // Actualizar los mensajes y conversaciones
+          setMessagesByChat(prev => {
+            const newMessages = { ...prev };
+            chatsWithPlatform.forEach(chat => {
+              const chatKey = `${platform}_${chat.userId}`;
+              newMessages[chatKey] = chat.messages.map(msg => ({
+                id: msg.timestamp,
+                text: msg.message,
+                sender: msg.sender,
+                timestamp: new Date(msg.timestamp).toLocaleTimeString([], { 
+                  hour: '2-digit', 
+                  minute: '2-digit' 
+                })
+              }));
+            });
+            return newMessages;
+          });
+
+          setConversations(prev => {
+            const filteredConvs = prev.filter(conv => conv.platform !== platform);
+            return [...filteredConvs, ...chatsWithPlatform.map(chat => ({
+              id: chat.userId,
+              name: chat.username,
+              lastMessage: chat.messages[chat.messages.length - 1]?.message || 'Inicio de chat',
+              unread: 0,
+              platform: platform,
+              timestamp: new Date().toLocaleTimeString(),
+              avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${chat.username}`,
+              actualUserId: chat.actualUserId
+            }))];
+          });
+          break;
 
         case 'new_chat':
           setConversations(prev => {
@@ -84,7 +88,7 @@ export default function ChatManagement() {
               name: data.username,
               lastMessage: data.message,
               unread: 1,
-              platform: "whatsapp",
+              platform: platform,
               timestamp: new Date().toLocaleTimeString([], { 
                 hour: '2-digit', 
                 minute: '2-digit' 
@@ -92,12 +96,13 @@ export default function ChatManagement() {
               avatar: `https://api.dicebear.com/7.x/avataaars/svg?seed=${data.username}`,
               actualUserId: data.actualUserId
             }]
-          })
+          });
+
           setMessagesByChat(prev => ({
             ...prev,
-            [data.userId]: []
-          }))
-          break
+            [`${platform}_${data.userId}`]: []
+          }));
+          break;
 
         case 'chat_message':
           const newMsg = {
@@ -108,19 +113,25 @@ export default function ChatManagement() {
               hour: '2-digit', 
               minute: '2-digit' 
             })
-          }
+          };
 
-          setMessagesByChat(prev => ({
-            ...prev,
-            [data.userId]: [...(prev[data.userId] || []), newMsg]
-          }))
+          // Actualizar messagesByChat
+          setMessagesByChat(prev => {
+            const chatKey = `${platform}_${data.userId}`;
+            const updatedMessages = [...(prev[chatKey] || []), newMsg];
+            return {
+              ...prev,
+              [chatKey]: updatedMessages
+            };
+          });
 
-          if (selectedChat?.id === data.userId) {
-            setMessages(prev => [...prev, newMsg])
+          // Si el chat está seleccionado, actualizar los mensajes directamente
+          if (selectedChat?.id === data.userId && selectedChat?.platform === platform) {
+            setMessages(prev => [...prev, newMsg]);
           }
 
           setConversations(prev => prev.map(conv => {
-            if (conv.id === data.userId && conv.actualUserId === data.actualUserId) {
+            if (conv.id === data.userId && conv.platform === platform) {
               return {
                 ...conv,
                 lastMessage: data.message,
@@ -132,32 +143,63 @@ export default function ChatManagement() {
               }
             }
             return conv
-          }))
-          break
+          }));
+          break;
 
         case 'end_chat':
           setConversations(prev => prev.filter(conv => 
             !(conv.id === data.userId && conv.actualUserId === data.actualUserId)
-          ))
+          ));
+          
           setMessagesByChat(prev => {
-            const newMessages = { ...prev }
-            delete newMessages[data.userId]
-            return newMessages
-          })
-          if (selectedChat?.id === data.userId) {
-            setSelectedChat(null)
-            setMessages([])
+            const newMessages = { ...prev };
+            delete newMessages[`${platform}_${data.userId}`];
+            return newMessages;
+          });
+          
+          if (selectedChat?.id === data.userId && selectedChat?.platform === platform) {
+            setSelectedChat(null);
+            setMessages([]);
           }
-          break
+          break;
       }
-    }
+    };
+
+    wsWhatsapp.onopen = () => {
+      wsWhatsapp.send(JSON.stringify({
+        type: 'admin_register',
+        adminId: adminId
+      }));
+    };
+
+    wsTelegram.onopen = () => {
+      wsTelegram.send(JSON.stringify({
+        type: 'admin_register',
+        adminId: adminId
+      }));
+    };
+
+    wsWhatsapp.onmessage = (event) => handleWebSocketMessage(event, 'whatsapp');
+    wsTelegram.onmessage = (event) => handleWebSocketMessage(event, 'telegram');
+
+    wsRef.current = {
+      whatsapp: wsWhatsapp,
+      telegram: wsTelegram
+    };
 
     return () => {
-      if (wsRef.current) {
-        wsRef.current.close()
-      }
+      wsWhatsapp.close();
+      wsTelegram.close();
+    };
+  }, [adminId]);
+
+  // Efecto para mantener los mensajes sincronizados con messagesByChat
+  useEffect(() => {
+    if (selectedChat) {
+      const chatKey = `${selectedChat.platform}_${selectedChat.id}`;
+      setMessages(messagesByChat[chatKey] || []);
     }
-  }, [adminId, selectedChat])
+  }, [selectedChat, messagesByChat]);
 
   useEffect(() => {
     if (chatContainerRef.current) {
@@ -169,7 +211,10 @@ export default function ChatManagement() {
     e.preventDefault()
     if (!newMessage.trim() || !selectedChat) return
 
-    wsRef.current.send(JSON.stringify({
+    const ws = wsRef.current[selectedChat.platform]
+    if (!ws) return
+
+    ws.send(JSON.stringify({
       type: 'chat_message',
       userId: selectedChat.id,
       message: newMessage
@@ -187,7 +232,7 @@ export default function ChatManagement() {
 
     setMessagesByChat(prev => ({
       ...prev,
-      [selectedChat.id]: [...(prev[selectedChat.id] || []), newMsg]
+      [`${selectedChat.platform}_${selectedChat.id}`]: [...(prev[`${selectedChat.platform}_${selectedChat.id}`] || []), newMsg]
     }))
     setMessages(prev => [...prev, newMsg])
     setNewMessage("")
@@ -209,7 +254,7 @@ export default function ChatManagement() {
 
   const handleSelectChat = (conv) => {
     setSelectedChat(conv)
-    setMessages(messagesByChat[conv.id] || [])
+    setMessages(messagesByChat[`${conv.platform}_${conv.id}`] || [])
     setConversations(prev => prev.map(c => {
       if (c.id === conv.id) {
         return { ...c, unread: 0 }
