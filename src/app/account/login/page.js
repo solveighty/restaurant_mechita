@@ -32,6 +32,7 @@ const itemVariants = {
 
 export default function LoginPage() {
   const router = useRouter();
+  const [loading, setLoading] = useState(true);
   const [showPassword, setShowPassword] = useState(false)
   const [formData, setFormData] = useState({
     email: '',
@@ -42,11 +43,12 @@ export default function LoginPage() {
     password: ''
   });
 
-  // Verificar si el usuario ya está autenticado
   useEffect(() => {
     const token = localStorage.getItem('token');
     if (token) {
-      router.push('/');
+      router.replace('/');
+    } else {
+      setLoading(false);
     }
   }, [router]);
 
@@ -103,6 +105,14 @@ export default function LoginPage() {
       ...formData,
       [e.target.name]: e.target.value
     })
+  }
+
+  if (loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-orange-50 to-red-100">
+        <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-orange-500"></div>
+      </div>
+    );
   }
 
   return (
