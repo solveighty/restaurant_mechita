@@ -1,4 +1,3 @@
-import Image from 'next/image'
 import { Trash2 } from 'lucide-react'
 import { useCart } from '@/context/CartContext'
 
@@ -8,11 +7,10 @@ export default function CartItem({ item }) {
   return (
     <div className="flex items-center space-x-4 border-b pb-4">
       <div className="relative h-16 w-16">
-        <Image
+        <img
           src={item.menu.imagen}
           alt={item.menu.nombre}
-          fill
-          className="object-cover rounded-md"
+          className="w-full h-full object-cover rounded-md"
         />
       </div>
       <div className="flex-1">

@@ -12,6 +12,7 @@ export function NotificationProvider({ children }) {
   const [notifications, setNotifications] = useState([])
   const [loading, setLoading] = useState(true)
   const [userId, setUserId] = useState(null)
+  const [isToastShowing, setIsToastShowing] = useState(false);
 
   useEffect(() => {
     const token = localStorage.getItem('token')
@@ -25,8 +26,30 @@ export function NotificationProvider({ children }) {
     }
   }, [])
 
+  // Agregar un efecto para el polling
+  useEffect(() => {
+    let intervalId;
+
+    if (userId) {
+      // Hacer la primera consulta inmediatamente
+      fetchNotifications();
+
+      // Configurar el intervalo de polling (cada 10 segundos)
+      intervalId = setInterval(() => {
+        fetchNotifications();
+      }, 10000);
+    }
+
+    // Limpiar el intervalo cuando el componente se desmonte o userId cambie
+    return () => {
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+    };
+  }, [userId]);
+
   const fetchNotifications = async () => {
-    if (!userId) return
+    if (!userId || isToastShowing) return
 
     try {
       setLoading(true)
@@ -42,8 +65,18 @@ export function NotificationProvider({ children }) {
         .filter(notification => notification.tipoNotificacion === 'USUARIO')
         .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
       
-      if (filteredNotifications.length > 0) {
-        toast.success('Tienes una nueva notificación', { autoClose: 2000, closeOnClick: true, hideProgressBar: true, position: "bottom-right" });
+      // Solo mostrar el toast si hay notificaciones no leídas
+      const unreadNotifications = filteredNotifications.filter(notification => !notification.leida)
+      if (unreadNotifications.length > 0 && !toast.isActive('newNotification')) {
+        setIsToastShowing(true);
+        toast.success('Tienes una nueva notificación', { 
+          autoClose: 2000, 
+          closeOnClick: true, 
+          hideProgressBar: true, 
+          position: "bottom-right",
+          toastId: 'newNotification',
+          onClose: () => setIsToastShowing(false)
+        });
       }
 
       setNotifications(filteredNotifications)
@@ -57,6 +90,8 @@ export function NotificationProvider({ children }) {
   }
 
   const markAsRead = async (notificationId) => {
+    if (isToastShowing) return;
+    
     try {
       const token = localStorage.getItem('token')
       await axios.put(
@@ -76,17 +111,22 @@ export function NotificationProvider({ children }) {
             : notif
         )
       )
-      toast.success('Notificación marcada como leída', { autoClose: 2000, closeOnClick: true, hideProgressBar: true, position: "bottom-right" });
+      
+      if (!toast.isActive('notificationRead')) {
+        setIsToastShowing(true);
+        toast.success('Notificación marcada como leída', { 
+          autoClose: 2000, 
+          closeOnClick: true, 
+          hideProgressBar: true, 
+          position: "bottom-right",
+          toastId: 'notificationRead',
+          onClose: () => setIsToastShowing(false)
+        });
+      }
     } catch (error) {
       console.error('Error al marcar notificación como leída:', error)
     }
   }
-
-  useEffect(() => {
-    if (userId) {
-      fetchNotifications()
-    }
-  }, [userId])
 
   const value = {
     notifications,

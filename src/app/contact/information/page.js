@@ -1,8 +1,7 @@
 'use client'
 
 import { motion } from 'framer-motion'
-import { MapPin, Phone, Clock, Mail, Instagram, Send, MessageCircle } from 'lucide-react'
-import Link from 'next/link'
+import { Phone, Clock, Mail, Instagram, Send, MessageCircle } from 'lucide-react'
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -37,7 +36,7 @@ export default function ContactPage() {
     },
     socialMedia: {
       instagram: "https://www.instagram.com/romanpaulov/",
-      telegram: "https://t.me/manulization",
+      telegram: "https://t.me/ComidasMechita_bot",
       whatsapp: "https://manulization.com/"
     }
   }

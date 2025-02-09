@@ -3,7 +3,6 @@
 import { useState, useEffect } from 'react'
 import axios from 'axios'
 import { ChevronDown, ChevronUp, ShoppingCart, X } from 'lucide-react'
-import Image from 'next/image'
 import { motion, AnimatePresence } from 'framer-motion'
 import * as jose from 'jose'
 import { toast } from 'react-toastify';
@@ -321,11 +320,10 @@ export default function MenuDisplay() {
                   transition={{ delay: 0.2 }}
                   className="relative w-full md:w-1/2 h-56 sm:h-64 md:h-auto"
                 >
-                  <Image 
+                  <img 
                     src={selectedItem.imagen} 
                     alt={selectedItem.nombre}
-                    fill
-                    className="object-fill"
+                    className="w-full h-full object-cover"
                   />
                 </motion.div>
                 <motion.div 
