@@ -1,8 +1,8 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
-import { Send, Phone, MessageSquare } from 'lucide-react'
-import { motion } from 'framer-motion'
+import { Send, Phone, MessageSquare, Menu } from 'lucide-react'
+import { motion, AnimatePresence } from 'framer-motion'
 import * as jose from 'jose'
 import url_Backend from '@/context/config'
 
@@ -15,6 +15,7 @@ export default function ChatManagement() {
   const wsRef = useRef(null)
   const [adminId, setAdminId] = useState(null)
   const [messagesByChat, setMessagesByChat] = useState({})
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true)
 
   useEffect(() => {
     // Obtener y decodificar el token
@@ -264,131 +265,238 @@ export default function ChatManagement() {
   }
 
   return (
-    <div className="h-[calc(100vh-6rem)] flex">
-      {/* Lista de conversaciones */}
-      <div className="w-1/3 border-r bg-white">
-        <div className="p-4 border-b">
-          <h2 className="text-lg font-semibold text-gray-800">Conversaciones</h2>
-        </div>
-        <div className="overflow-y-auto h-[calc(100%-4rem)]">
-          {conversations.map((conv) => (
-            <motion.div
-              key={conv.id}
-              whileHover={{ backgroundColor: "rgba(0,0,0,0.05)" }}
-              onClick={() => handleSelectChat(conv)}
-              className={`p-4 border-b cursor-pointer ${
-                selectedChat?.id === conv.id ? "bg-orange-50" : ""
-              }`}
-            >
-              <div className="flex items-center space-x-4">
-                <div className="relative">
-                  <img
-                    src={conv.avatar}
-                    alt={conv.name}
-                    className="w-12 h-12 rounded-full"
-                  />
-                  <span className="absolute bottom-0 right-0">
-                    {conv.platform === "telegram" ? (
-                      <MessageSquare className="w-4 h-4 text-blue-500" />
-                    ) : (
-                      <Phone className="w-4 h-4 text-green-500" />
-                    )}
-                  </span>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex justify-between items-start">
-                    <h3 className="text-sm font-medium text-gray-900 truncate">
-                      {conv.name}
-                    </h3>
-                    <span className="text-xs text-gray-500">{conv.timestamp}</span>
-                  </div>
-                  <p className="text-sm text-gray-500 truncate">{conv.lastMessage}</p>
-                </div>
-                {conv.unread > 0 && (
-                  <span className="inline-flex items-center justify-center w-5 h-5 text-xs font-medium text-white bg-orange-500 rounded-full">
-                    {conv.unread}
-                  </span>
-                )}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </div>
+    <div className="h-[calc(100vh-6rem)] flex flex-col md:flex-row bg-gray-100">
+      {/* Botón de menú móvil con animación mejorada */}
+      <motion.button 
+        whileHover={{ scale: 1.05 }}
+        whileTap={{ scale: 0.95 }}
+        onClick={() => setIsSidebarOpen(!isSidebarOpen)}
+        className="md:hidden fixed top-20 right-4 z-50 bg-orange-500 hover:bg-orange-600 text-white p-3 rounded-full shadow-lg transition-all duration-300 ease-in-out"
+      >
+        <Menu className="h-5 w-5" />
+      </motion.button>
 
-      {/* Área de chat */}
+      {/* Sidebar mejorado */}
+      <motion.div 
+        initial={{ x: -300, opacity: 0 }}
+        animate={{ 
+          x: isSidebarOpen ? 0 : -300,
+          opacity: isSidebarOpen ? 1 : 0,
+          width: isSidebarOpen ? 'auto' : 0 
+        }}
+        transition={{ type: "spring", bounce: 0.2, duration: 0.6 }}
+        className={`
+          fixed md:relative
+          w-full md:w-1/3 lg:w-1/4
+          h-full
+          bg-white
+          border-r border-gray-200
+          shadow-2xl md:shadow-lg
+          z-40 md:z-auto
+          overflow-hidden
+        `}
+      >
+        {/* Header del sidebar */}
+        <div className="sticky top-0 z-10 bg-white border-b border-gray-200">
+          <div className="p-4 flex items-center justify-between">
+            <h2 className="text-xl font-bold text-gray-800">Conversaciones</h2>
+            <span className="px-3 py-1 bg-orange-100 text-orange-600 rounded-full text-sm font-medium">
+              {conversations.length}
+            </span>
+          </div>
+        </div>
+
+        {/* Lista de conversaciones */}
+        <div className="overflow-y-auto h-[calc(100%-4rem)] pb-20">
+          <AnimatePresence>
+            {conversations.map((conv) => (
+              <motion.div
+                key={conv.id}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, x: -100 }}
+                whileHover={{ scale: 1.02, backgroundColor: 'rgb(255, 237, 213)' }}
+                whileTap={{ scale: 0.98 }}
+                onClick={() => {
+                  handleSelectChat(conv);
+                  if (window.innerWidth < 768) setIsSidebarOpen(false);
+                }}
+                className={`
+                  p-4 border-b border-gray-100
+                  cursor-pointer
+                  transition-all duration-200
+                  hover:bg-orange-50
+                  ${selectedChat?.id === conv.id ? "bg-orange-100" : ""}
+                `}
+              >
+                <div className="flex items-center space-x-4">
+                  <div className="relative flex-shrink-0">
+                    <motion.img
+                      whileHover={{ scale: 1.1 }}
+                      src={conv.avatar}
+                      alt={conv.name}
+                      className="w-12 h-12 rounded-full object-cover border-2 border-gray-200"
+                    />
+                    <span className="absolute -bottom-1 -right-1 p-1 rounded-full bg-white shadow-md">
+                      {conv.platform === "telegram" ? (
+                        <MessageSquare className="w-4 h-4 text-blue-500" />
+                      ) : (
+                        <Phone className="w-4 h-4 text-green-500" />
+                      )}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex justify-between items-center mb-1">
+                      <h3 className="text-sm font-semibold text-gray-900 truncate">
+                        {conv.name}
+                      </h3>
+                      <span className="text-xs text-gray-500 ml-2 flex-shrink-0">
+                        {conv.timestamp}
+                      </span>
+                    </div>
+                    <p className="text-sm text-gray-600 truncate">{conv.lastMessage}</p>
+                    {conv.unread > 0 && (
+                      <motion.span
+                        initial={{ scale: 0 }}
+                        animate={{ scale: 1 }}
+                        className="inline-flex items-center justify-center px-2 py-1 text-xs font-bold leading-none text-white bg-orange-500 rounded-full mt-2"
+                      >
+                        {conv.unread}
+                      </motion.span>
+                    )}
+                  </div>
+                </div>
+              </motion.div>
+            ))}
+          </AnimatePresence>
+        </div>
+      </motion.div>
+
+      {/* Área principal del chat */}
       <div className="flex-1 flex flex-col bg-gray-50">
         {selectedChat ? (
           <>
             {/* Header del chat */}
-            <div className="p-4 border-b bg-white">
+            <motion.div 
+              initial={{ opacity: 0, y: -20 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 bg-white border-b shadow-sm"
+            >
               <div className="flex items-center space-x-4">
-                <img
+                <motion.img
+                  whileHover={{ scale: 1.1 }}
                   src={selectedChat.avatar}
                   alt={selectedChat.name}
-                  className="w-10 h-10 rounded-full"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-gray-200"
                 />
                 <div>
-                  <h3 className="font-medium text-gray-900">{selectedChat.name}</h3>
-                  <span className="text-sm text-gray-500">
-                    {selectedChat.platform === "telegram" ? "Telegram" : "WhatsApp"}
-                  </span>
+                  <h3 className="font-semibold text-gray-900">{selectedChat.name}</h3>
+                  <p className="text-sm text-gray-500 flex items-center">
+                    {selectedChat.platform === "telegram" ? (
+                      <>
+                        <MessageSquare className="w-4 h-4 text-blue-500 mr-1" />
+                        Telegram
+                      </>
+                    ) : (
+                      <>
+                        <Phone className="w-4 h-4 text-green-500 mr-1" />
+                        WhatsApp
+                      </>
+                    )}
+                  </p>
                 </div>
               </div>
-            </div>
+            </motion.div>
 
-            {/* Mensajes */}
+            {/* Área de mensajes */}
             <div 
               ref={chatContainerRef}
               className="flex-1 overflow-y-auto p-4 space-y-4"
             >
-              {messages.map((message) => (
-                <div
-                  key={message.id}
-                  className={`flex ${
-                    message.sender === "admin" ? "justify-end" : "justify-start"
-                  }`}
-                >
-                  <div
-                    className={`max-w-[70%] rounded-lg p-3 ${
-                      message.sender === "admin"
-                        ? "bg-orange-500 text-white"
-                        : "bg-white text-gray-800"
+              <AnimatePresence>
+                {messages.map((message, index) => (
+                  <motion.div
+                    key={message.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    exit={{ opacity: 0, x: message.sender === "admin" ? 100 : -100 }}
+                    transition={{ delay: index * 0.1 }}
+                    className={`flex ${
+                      message.sender === "admin" ? "justify-end" : "justify-start"
                     }`}
                   >
-                    <p className="text-sm">{message.text}</p>
-                    <span className="text-xs opacity-75 mt-1 block">
-                      {message.timestamp}
-                    </span>
-                  </div>
-                </div>
-              ))}
+                    <motion.div
+                      whileHover={{ scale: 1.02 }}
+                      className={`
+                        max-w-[75%] p-3 rounded-lg shadow-md
+                        ${message.sender === "admin"
+                          ? "bg-orange-500 text-white rounded-br-none"
+                          : "bg-white text-gray-800 rounded-bl-none"
+                        }
+                      `}
+                    >
+                      <p className="text-sm">{message.text}</p>
+                      <span className="text-xs opacity-75 mt-1 block">
+                        {message.timestamp}
+                      </span>
+                    </motion.div>
+                  </motion.div>
+                ))}
+              </AnimatePresence>
             </div>
 
-            {/* Input de mensaje */}
-            <form onSubmit={handleSendMessage} className="p-4 bg-white border-t">
-              <div className="flex space-x-4">
+            {/* Área de entrada de mensaje */}
+            <motion.form 
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              onSubmit={handleSendMessage}
+              className="p-4 bg-white border-t shadow-lg"
+            >
+              <div className="flex space-x-2">
                 <input
                   type="text"
                   value={newMessage}
                   onChange={(e) => setNewMessage(e.target.value)}
                   placeholder="Escribe un mensaje..."
-                  className="flex-1 border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:border-orange-500"
+                  className="flex-1 p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500 transition-all duration-200"
                 />
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                   type="submit"
-                  className="bg-orange-500 text-white p-2 rounded-lg hover:bg-orange-600"
+                  className="p-3 bg-orange-500 text-white rounded-lg hover:bg-orange-600 transition-colors duration-200 shadow-md"
                 >
                   <Send className="w-5 h-5" />
                 </motion.button>
               </div>
-            </form>
+            </motion.form>
           </>
         ) : (
-          <div className="flex-1 flex items-center justify-center text-gray-500">
-            Selecciona una conversación para comenzar
-          </div>
+          // Estado sin chat seleccionado
+          <motion.div 
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className="flex-1 flex items-center justify-center p-4"
+          >
+            <div className="text-center">
+              <motion.div
+                animate={{ 
+                  rotate: [0, 10, -10, 10, 0],
+                  scale: [1, 1.1, 1]
+                }}
+                transition={{ 
+                  duration: 2,
+                  repeat: Infinity,
+                  repeatType: "reverse"
+                }}
+              >
+                <MessageSquare className="w-16 h-16 mx-auto mb-4 text-orange-500 opacity-50" />
+              </motion.div>
+              <h3 className="text-xl font-semibold mb-2 text-gray-800">Sin chat seleccionado</h3>
+              <p className="text-gray-500">Selecciona una conversación para comenzar</p>
+            </div>
+          </motion.div>
         )}
       </div>
     </div>
